@@ -27,7 +27,7 @@ if [ "${1:-}" != "colors" ]; then
   export PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH:-/opt/playwright/browsers}"
   "${PYTHON:-/opt/playwright/bin/python}" "$DIR/screens.py" "$OUT" / /user /user/register || status=1
   LOGIN="$("$DRUSH" --root="$DRUPAL_ROOT" --uri="$BASE" uli --name="${TEST_USER:-claude}" --no-browser 2>/dev/null)" \
-    "${PYTHON:-/opt/playwright/bin/python}" "$DIR/screens.py" "$OUT" ${TEST_PATHS:-/node/add/article /cart} || status=1
+    "${PYTHON:-/opt/playwright/bin/python}" "$DIR/screens.py" "$OUT" ${TEST_PATHS:-/node/add/article /node/7} || status=1
   echo "Screenshots: $OUT"
 fi
 exit $status
