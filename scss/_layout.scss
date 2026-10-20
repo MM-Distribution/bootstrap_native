@@ -1,0 +1,126 @@
+// Page layout (templates/page.tpl.php): header with the navbar, content
+// with up to two sidebars, footer. The columns follow whichever sidebars
+// have blocks; on narrow screens everything stacks, content first.
+
+@layer custom {
+  body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  // Core's skip link: shown when focused.
+  #skip-link a.element-focusable:focus {
+    position: absolute;
+    z-index: var(--z-toast, 1090);
+    top: .5rem;
+    inset-inline-start: .5rem;
+    padding: .5rem 1rem;
+    color: var(--primary-contrast);
+    background: var(--primary-bg);
+    border-radius: var(--radius-5, .5rem);
+  }
+
+  .site-header {
+    background: var(--bg-1);
+    border-bottom: var(--border-width) solid var(--border-color);
+  }
+
+  // A long site name wraps instead of pushing the menu button down.
+  .site-header .navbar > .container {
+    flex-wrap: nowrap;
+  }
+
+  .site-header .navbar-brand {
+    display: flex;
+    gap: .75rem;
+    align-items: center;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .site-header .navbar-toggler {
+    flex-shrink: 0;
+    margin-inline-start: auto;
+  }
+
+  // Main menu after the brand, secondary menu (account links) at the end.
+  @media (width >= 992px) {
+    .site-header .drawer-body {
+      flex-grow: 1;
+    }
+
+    .site-header .navbar-nav ~ .navbar-nav {
+      margin-inline-start: auto;
+    }
+  }
+
+  .site-header .navbar-brand img {
+    max-height: 3rem;
+    width: auto;
+  }
+
+  .site-slogan {
+    font-size: var(--font-size-sm);
+    color: var(--fg-2);
+  }
+
+  .site-main {
+    flex: 1 0 auto;
+    padding-block: 1.5rem 2rem;
+  }
+
+  .page-columns {
+    display: grid;
+    grid-template-areas: "content";
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
+  }
+
+  .page-content { grid-area: content; }
+  .page-sidebar-first { grid-area: first; }
+  .page-sidebar-second { grid-area: second; }
+
+  @media (width < 992px) {
+    .page-columns:has(> .page-sidebar-first) {
+      grid-template-areas: "content" "first";
+    }
+
+    .page-columns:has(> .page-sidebar-second) {
+      grid-template-areas: "content" "second";
+    }
+
+    .page-columns:has(> .page-sidebar-first):has(> .page-sidebar-second) {
+      grid-template-areas: "content" "first" "second";
+    }
+  }
+
+  @media (width >= 992px) {
+    .page-columns:has(> .page-sidebar-first) {
+      grid-template-areas: "first content";
+      grid-template-columns: minmax(12rem, 1fr) minmax(0, 3fr);
+    }
+
+    .page-columns:has(> .page-sidebar-second) {
+      grid-template-areas: "content second";
+      grid-template-columns: minmax(0, 3fr) minmax(12rem, 1fr);
+    }
+
+    .page-columns:has(> .page-sidebar-first):has(> .page-sidebar-second) {
+      grid-template-areas: "first content second";
+      grid-template-columns: minmax(12rem, 1fr) minmax(0, 2.5fr) minmax(12rem, 1fr);
+    }
+  }
+
+  .page-title {
+    margin-block-end: 1rem;
+  }
+
+  .site-footer {
+    padding-block: 2rem;
+    color: var(--fg-2);
+    background: var(--bg-2);
+    border-top: var(--border-width) solid var(--border-color);
+  }
+}

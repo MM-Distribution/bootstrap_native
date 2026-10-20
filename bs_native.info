@@ -1,0 +1,37 @@
+name = Bootstrap Native
+description = Bootstrap 6 styling on Drupal's own markup: forms, menus and messages keep the structure and classes modules expect.
+core = 7.x
+version = 7.x-1.0-dev
+screenshot = screenshot.png
+
+; Compiled from scss/ by build/build.sh (Bootstrap 6.0.0-alpha.1 in vendor/bootstrap).
+stylesheets[all][] = css/bs_native.css
+
+regions[header]         = Header
+regions[navigation]     = Navigation
+regions[highlighted]    = Highlighted
+regions[help]           = Help
+regions[content]        = Content
+regions[sidebar_first]  = First sidebar
+regions[sidebar_second] = Second sidebar
+regions[footer]         = Footer
+regions[page_top]       = Page top
+regions[page_bottom]    = Page bottom
+
+features[] = logo
+features[] = name
+features[] = slogan
+features[] = favicon
+features[] = main_menu
+features[] = secondary_menu
+
+; A base theme has no logo of its own: sites upload theirs (no logo.png).
+settings[default_logo] = 0
+
+; Colors: empty means Bootstrap's own (see theme-settings.php).
+settings[bs_native_color_primary] = ''
+settings[bs_native_color_secondary] = ''
+settings[bs_native_color_base] = ''
+settings[bs_native_color_text] = ''
+settings[bs_native_color_link] = ''
+settings[bs_native_color_link_hover] = ''

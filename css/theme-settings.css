@@ -1,0 +1,77 @@
+/**
+ * @file
+ * Theme settings page (shown in the admin theme): color fields, preview.
+ */
+
+.bs-native-color-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0 1.5rem;
+}
+
+.bs-native-color-fields .form-item {
+  margin: .5em 0 1em;
+}
+
+.bs-native-picker {
+  width: 2.25rem;
+  height: 2rem;
+  padding: 0 2px;
+  margin-right: .375rem;
+  vertical-align: middle;
+  cursor: pointer;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* No color chosen: the swatch shows the default, faded. */
+.bs-native-picker.is-default {
+  opacity: .45;
+}
+
+.bs-native-color {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  vertical-align: middle;
+}
+
+.bs-native-clear {
+  margin-left: .375rem;
+  padding: 0;
+  color: #0071b3;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  text-decoration: underline;
+}
+
+.bs-native-preview iframe {
+  display: block;
+  width: 100%;
+  max-width: 44rem;
+  height: 36rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.bs-native-notes {
+  max-width: 44rem;
+  padding: .5em 1em;
+  margin-top: .75em;
+  background: #fffbe6;
+  border: 1px solid #e8d48a;
+  border-radius: 6px;
+}
+
+.bs-native-notes p {
+  margin: .25em 0;
+}
+
+.bs-native-swatch {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-left: .25em;
+  vertical-align: -.15em;
+  border: 1px solid rgba(0, 0, 0, .25);
+  border-radius: 3px;
+}

@@ -1,0 +1,278 @@
+// Drupal's page furniture with Bootstrap 6's look: messages, tabs, pager,
+// menus, tables, progress bars. Markup as Drupal core writes it, except
+// where includes/*.inc adds Bootstrap classes (tabs, breadcrumb, tables).
+
+@use "../vendor/bootstrap/scss/alert";
+@use "../vendor/bootstrap/scss/pagination";
+@use "../vendor/bootstrap/scss/buttons";
+@use "../vendor/bootstrap/scss/helpers";
+@use "../vendor/bootstrap/scss/content/tables";
+@use "../vendor/bootstrap/scss/nav";
+
+@layer custom {
+  // Status messages (theme_status_messages(), with a role added).
+  div.messages {
+    @extend .alert;
+    margin-block-end: 1rem;
+
+    > ul {
+      padding-inline-start: 1.25rem;
+      margin: 0;
+    }
+
+    > ul > li + li {
+      margin-top: .25rem;
+    }
+  }
+
+  div.messages.status {
+    @extend .theme-success;
+  }
+
+  div.messages.warning {
+    @extend .theme-warning;
+  }
+
+  div.messages.error {
+    @extend .theme-danger;
+  }
+
+  // Drupal's placeholders in messages (<em class="placeholder">).
+  em.placeholder {
+    font-style: normal;
+    font-weight: var(--font-weight-semibold, 600);
+  }
+
+  // Local tasks (tabs): Bootstrap's nav classes come from
+  // bs_native_menu_local_tasks(); this only spaces them.
+  .tabs-wrapper {
+    margin-block-end: 1.25rem;
+  }
+
+  ul.tabs.secondary {
+    margin-top: .75rem;
+  }
+
+  // Navbar menus from theme_links() (bs_native_preprocess_page() adds
+  // .nav-link to the links; the items keep core's classes).
+  .navbar-nav > li {
+    @extend .nav-item;
+  }
+
+  // Action links ("Add content" and the like).
+  ul.action-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    padding: 0;
+    margin: 0 0 1rem;
+    list-style: none;
+
+    a {
+      @extend .btn-subtle;
+      @extend .theme-primary;
+    }
+  }
+
+  // Pager (theme_pager(): ul.pager, the current page is plain text).
+  .item-list ul.pager {
+    @extend .pagination;
+    flex-wrap: wrap;
+    padding: 0;
+    margin: 1.5rem 0;
+    text-align: start;
+
+    > li {
+      padding: 0;
+      margin: 0;
+    }
+
+    > li > a,
+    > li.pager-current,
+    > li.pager-ellipsis {
+      @extend .page-link;
+    }
+
+    > li:not(:first-child) > a,
+    > li:not(:first-child).pager-current,
+    > li:not(:first-child).pager-ellipsis {
+      margin-inline-start: calc(-1 * var(--pagination-border-width));
+    }
+
+    > li:first-child > a {
+      border-start-start-radius: var(--pagination-border-radius);
+      border-end-start-radius: var(--pagination-border-radius);
+    }
+
+    > li:last-child > a,
+    > li:last-child.pager-current {
+      border-start-end-radius: var(--pagination-border-radius);
+      border-end-end-radius: var(--pagination-border-radius);
+    }
+
+    > li.pager-current {
+      z-index: 1;
+      color: var(--pagination-active-color);
+      background-color: var(--pagination-active-bg);
+      border-color: var(--pagination-active-border-color);
+    }
+
+    > li.pager-ellipsis {
+      color: var(--pagination-disabled-color);
+    }
+  }
+
+  // Menus (ul.menu, from menu blocks and menu_tree()): a plain vertical
+  // list of links; nested levels indented.
+  ul.menu {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+
+    ul.menu {
+      padding-inline-start: 1rem;
+    }
+
+    li {
+      padding: 0;
+      margin: 0;
+      list-style: none;
+    }
+
+    a {
+      display: block;
+      padding: .375rem .5rem;
+      color: var(--fg-1);
+      text-decoration: none;
+      border-radius: var(--radius-3, .25rem);
+
+      &:hover,
+      &:focus-visible {
+        color: var(--fg-body);
+        background: var(--bg-2);
+      }
+
+      &.active,
+      &.active-trail {
+        color: var(--primary-fg);
+        font-weight: var(--font-weight-medium, 500);
+      }
+    }
+  }
+
+  // Inline link lists (theme_links(): node links, comment links).
+  ul.links.inline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .25rem 1rem;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+
+    li {
+      padding: 0;
+    }
+  }
+
+  // Tables: Bootstrap's .table and the wrapper come from bs_native_table().
+  .table-responsive {
+    margin-block-end: 1rem;
+  }
+
+  .table-responsive > table {
+    margin-block-end: 0;
+  }
+
+  table.sticky-header {
+    z-index: 2;
+    margin: 0;
+    background: var(--bg-body);
+  }
+
+  // Sorted column and its arrow.
+  th.active,
+  td.active {
+    background-color: var(--bg-1);
+  }
+
+  th > a {
+    color: inherit;
+  }
+
+  // Draggable rows (misc/tabledrag.js).
+  tr.drag {
+    background-color: var(--warning-bg-subtle);
+  }
+
+  tr.drag-previous {
+    background-color: var(--primary-bg-subtle);
+  }
+
+  .tabledrag-toggle-weight-wrapper {
+    margin-block-end: .5rem;
+    text-align: end;
+  }
+
+  // Progress bar (theme_progress_bar(): batch, uploads). Drupal's own
+  // markup and class names; Bootstrap's .progress is left out.
+  .progress {
+    margin-block: .5rem;
+
+    .bar {
+      height: .5rem;
+      overflow: hidden;
+      background: var(--bg-3);
+      border: 0;
+      border-radius: 1rem;
+    }
+
+    .filled {
+      height: 100%;
+      background: var(--primary-bg);
+      border-radius: inherit;
+      transition: width .3s;
+
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
+    }
+
+    .percentage {
+      float: inline-end;
+    }
+
+    .message,
+    .percentage {
+      font-size: var(--font-size-sm);
+      color: var(--fg-2);
+    }
+  }
+
+  // AJAX throbber next to buttons and fields.
+  .ajax-progress {
+    display: inline-block;
+    vertical-align: middle;
+  }
+
+  // Blocks.
+  .block {
+    margin-block-end: 1.5rem;
+  }
+
+  .block > h2,
+  .block-title {
+    margin-block-end: .75rem;
+    font-size: 1.125rem;
+  }
+
+  // Item lists: Drupal wraps them in .item-list; keep normal list spacing.
+  .item-list ul li {
+    margin: 0;
+  }
+
+  // Site-wide messages above forms (e.g. "Changes made in this table...").
+  .tabledrag-changed-warning {
+    @extend .alert;
+    @extend .theme-warning;
+  }
+}

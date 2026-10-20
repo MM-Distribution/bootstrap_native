@@ -1,0 +1,324 @@
+// Drupal's form markup with Bootstrap 6's form styles.
+//
+// Drupal core's markup stays as it is (modules and their JavaScript rely
+// on it); Bootstrap's rules are extended onto Drupal's own classes:
+//
+//   <div class="form-item form-type-textfield">     -> .form-field
+//     <label for="edit-name">Name <span class="form-required">*</span>
+//     <input class="form-text">                      -> .form-control
+//     <div class="description">                      -> help text
+//
+//   <div class="form-item form-type-checkbox">     -> .form-field
+//     <input class="form-checkbox"> <label class="option">  -> .check
+//
+// Bootstrap 6's own checkbox markup is the same as Drupal's (input, then
+// label, in one wrapper), so nothing has to move.
+
+@use "../vendor/bootstrap/scss/forms/labels";
+@use "../vendor/bootstrap/scss/forms/form-control";
+@use "../vendor/bootstrap/scss/forms/check";
+@use "../vendor/bootstrap/scss/forms/radio";
+@use "../vendor/bootstrap/scss/forms/form-field";
+@use "../vendor/bootstrap/scss/forms/validation";
+@use "../vendor/bootstrap/scss/forms/input-group";
+@use "../vendor/bootstrap/scss/buttons";
+@use "../vendor/bootstrap/scss/helpers";
+
+@layer custom {
+  // Fields.
+  .form-item {
+    @extend .form-field;
+    margin-block: 0 1rem;
+  }
+
+  .form-text,
+  .form-textarea,
+  .form-select,
+  .form-file,
+  .form-email,
+  .form-url,
+  .form-number,
+  .form-tel,
+  .form-search {
+    @extend .form-control;
+  }
+
+  .form-checkbox {
+    @extend .check;
+  }
+
+  .form-radio {
+    @extend .radio;
+  }
+
+  // Errors: Drupal puts .error on the input (and the wrapper's label turns
+  // red through Bootstrap's :has() rules).
+  input.error,
+  select.error,
+  textarea.error {
+    @extend .is-invalid;
+  }
+
+  // Labels.
+  .form-item > label:not(.option) {
+    font-weight: var(--font-weight-medium, 500);
+  }
+
+  .form-required {
+    color: var(--danger-fg);
+  }
+
+  // Help text (Drupal's description; Bootstrap calls it .form-text).
+  .form-item .description,
+  .fieldset-description {
+    font-size: var(--font-size-sm);
+    color: var(--fg-2);
+  }
+
+  // Checkbox and radio groups: their items sit close together.
+  .form-checkboxes,
+  .form-radios {
+    display: grid;
+    gap: .375rem;
+
+    > .form-item {
+      margin: 0;
+    }
+  }
+
+  // Inline forms (Drupal's .container-inline).
+  .container-inline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem 1rem;
+    align-items: end;
+
+    .form-item {
+      margin: 0;
+    }
+
+    .form-control {
+      width: auto;
+    }
+
+    .form-actions {
+      margin: 0;
+    }
+  }
+
+  // Fields with a size: as wide as asked for, never wider than the page.
+  .form-text[size],
+  .form-email[size],
+  .form-url[size],
+  .form-tel[size] {
+    max-width: 100%;
+  }
+
+  // Buttons: theme_button() adds Bootstrap's classes; this covers markup
+  // that skipped it (buttons written into module markup or JavaScript).
+  .form-submit:not([class*="btn-"]) {
+    @extend .btn-solid;
+    @extend .theme-secondary;
+  }
+
+  .form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    align-items: center;
+    margin-block: 1.5rem 1rem;
+  }
+
+  // Fieldsets.
+  fieldset.form-wrapper {
+    min-width: 0;
+    padding: 1rem 1.25rem .25rem;
+    margin: 0 0 1.25rem;
+    border: var(--border-width) solid var(--border-color);
+    border-radius: var(--radius-5, .5rem);
+
+    > legend {
+      float: none;
+      width: auto;
+      padding: 0 .375rem;
+      margin: 0 0 .25rem -.375rem;
+      font-size: 1rem;
+      font-weight: var(--font-weight-semibold, 600);
+    }
+  }
+
+  // Collapsible fieldsets (misc/collapse.js): the legend is a toggle.
+  html.js fieldset.collapsible {
+    .fieldset-legend {
+      position: relative;
+      padding-inline-start: 1.25rem;
+      background: none;
+    }
+
+    .fieldset-legend::before {
+      position: absolute;
+      inset-inline-start: 0;
+      top: .5em;
+      width: .5em;
+      height: .5em;
+      content: "";
+      border-inline-end: 2px solid currentcolor;
+      border-bottom: 2px solid currentcolor;
+      transform: rotate(45deg);
+      transition: transform .15s;
+
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
+    }
+
+    a.fieldset-title {
+      color: inherit;
+      text-decoration: none;
+    }
+  }
+
+  html.js fieldset.collapsed {
+    padding-bottom: 0;
+    border-color: var(--border-color);
+
+    .fieldset-legend::before {
+      transform: rotate(-45deg);
+    }
+  }
+
+  // Vertical tabs (misc/vertical-tabs.js).
+  div.vertical-tabs {
+    display: grid;
+    grid-template-columns: minmax(10rem, 14rem) 1fr;
+    margin: 0 0 1.25rem;
+    border: var(--border-width) solid var(--border-color);
+    border-radius: var(--radius-5, .5rem);
+
+    @media (width < 576px) {
+      grid-template-columns: 1fr;
+    }
+
+    ul.vertical-tabs-list {
+      float: none;
+      width: auto;
+      padding: .5rem;
+      margin: 0;
+      list-style: none;
+      background: var(--bg-1);
+      border: 0;
+      border-inline-end: var(--border-width) solid var(--border-color);
+      border-start-start-radius: inherit;
+      border-end-start-radius: inherit;
+
+      li {
+        margin: 0;
+        background: none;
+        border: 0;
+      }
+
+      a {
+        display: block;
+        padding: .5rem .75rem;
+        color: var(--fg-1);
+        text-decoration: none;
+        border-radius: var(--radius-3, .25rem);
+
+        &:hover,
+        &:focus-visible {
+          background: var(--bg-3);
+        }
+      }
+
+      .selected a {
+        color: var(--fg-body);
+        background: var(--bg-body);
+        box-shadow: 0 0 0 1px var(--border-color);
+      }
+
+      .summary {
+        display: block;
+        font-size: var(--font-size-sm);
+        color: var(--fg-3);
+      }
+    }
+
+    .vertical-tabs-panes {
+      min-width: 0;
+      padding: 1rem 1.25rem;
+
+      > fieldset.vertical-tabs-pane {
+        padding: 0;
+        margin: 0;
+        border: 0;
+      }
+    }
+  }
+
+  // Password strength and confirmation (user.js).
+  .password-strength,
+  div.password-confirm {
+    font-size: var(--font-size-sm);
+  }
+
+  .password-indicator {
+    height: .375rem;
+    overflow: hidden;
+    background: var(--bg-3);
+    border-radius: 1rem;
+
+    .indicator {
+      height: 100%;
+      background: var(--success-base);
+      transition: width .2s;
+
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
+    }
+  }
+
+  .password-suggestions {
+    padding: .75rem 1rem;
+    margin: .5rem 0;
+    background: var(--warning-bg-subtle);
+    border: var(--border-width) solid var(--warning-border);
+    border-radius: var(--radius-5, .5rem);
+  }
+
+  // Autocomplete popup (misc/autocomplete.js).
+  #autocomplete {
+    overflow: hidden;
+    color: var(--fg-body);
+    background: var(--bg-body);
+    border: var(--border-width) solid var(--border-color);
+    border-radius: var(--radius-5, .5rem);
+    box-shadow: var(--box-shadow);
+
+    li {
+      padding: .375rem .75rem;
+      cursor: default;
+    }
+
+    li.selected {
+      color: var(--primary-contrast);
+      background: var(--primary-bg);
+    }
+  }
+
+  // Resizable textareas (misc/textarea.js).
+  .resizable-textarea .grippie {
+    height: .625rem;
+    margin-top: -1px;
+    background-color: var(--bg-2);
+    border: var(--border-width) solid var(--border-color);
+    border-top: 0;
+    border-end-start-radius: var(--radius-5, .5rem);
+    border-end-end-radius: var(--radius-5, .5rem);
+  }
+
+  .resizable-textarea .form-textarea {
+    border-end-start-radius: 0;
+    border-end-end-radius: 0;
+  }
+}

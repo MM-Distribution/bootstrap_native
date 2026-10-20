@@ -1,0 +1,76 @@
+// Content as Drupal core writes it: nodes, fields, comments.
+
+@layer custom {
+  // Headings that are links (node and block titles): heading color, the
+  // link color only on hover.
+  :is(h1, h2, h3, h4, h5, h6) > a {
+    color: inherit;
+    text-decoration: none;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--link-hover-color);
+      text-decoration: underline;
+    }
+  }
+
+  // Nodes (teasers in lists are separated by a rule).
+  .node {
+    margin-block-end: 2rem;
+
+    > h2 {
+      margin-block-end: .25rem;
+    }
+  }
+
+  .node-teaser + .node-teaser {
+    padding-block-start: 2rem;
+    border-top: var(--border-width) solid var(--border-color);
+  }
+
+  .node .submitted,
+  .comment .submitted {
+    margin-block-end: .75rem;
+    font-size: var(--font-size-sm);
+    color: var(--fg-3);
+  }
+
+  .node > .link-wrapper,
+  .node ul.links {
+    margin-block-start: .75rem;
+    font-size: var(--font-size-sm);
+  }
+
+  // Fields: labels above or inline (field.css lays them out).
+  .field-label {
+    font-weight: var(--font-weight-semibold, 600);
+  }
+
+  .field + .field {
+    margin-block-start: .5rem;
+  }
+
+  // Comments.
+  #comments {
+    margin-block-start: 2.5rem;
+  }
+
+  .comment {
+    padding-block: 1rem;
+    border-top: var(--border-width) solid var(--border-color);
+  }
+
+  .indented {
+    margin-inline-start: 1.5rem;
+  }
+
+  // User pictures, feed icons.
+  .user-picture img {
+    border-radius: 50%;
+  }
+
+  .feed-icon {
+    display: inline-block;
+    margin-block-start: 1rem;
+  }
+}
