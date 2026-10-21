@@ -108,7 +108,8 @@ Variables (all `bootstrap_native_update_*`):
 | `releases`, `checked` | Bootstrap 6 releases from the npm registry, when last fetched |
 | `last_build` | the build the last release check made |
 | `part_info` | per release: part sizes, docs pages (measured once) |
-| `fallback`, `needs_build` | set when a rebuild failed / a sub-theme's additions couldn't be built |
+| `fallback`, `needs_build` | set when a rebuild or repair failed (`reason` = `files` for a repair) / a sub-theme's additions couldn't be built |
+| `repair` | set by a page that found the build's files missing; cleared by the repair |
 | `prereleases` (1), `daily` (0), `sass_path` (''), `registry` (npm) | settings; `registry` is for tests |
 
 Files:
@@ -136,6 +137,15 @@ Files:
 - `bootstrap_native_update_rebuild_if_stale()` (`hook_flush_caches()`):
   after a code update, rebuilds the active build. If that can't be done,
   it falls back to `''`.
+- `bootstrap_native_update_repair()` (`hook_flush_caches()`, so also
+  cron): if the active or previous build's files are missing or don't
+  match their recorded size and stamp
+  (`bootstrap_native_update_build_intact()`), rebuilds them with
+  `_restore_build()`. That re-downloads the release with
+  `_fetch_release()` only if its files are gone. When everything matches
+  it touches nothing. `bootstrap_native_update_files()` falls back to
+  `''` on a page whose build files are missing and sets the `repair`
+  flag.
 - `bootstrap_native_update_files()` (.module): CSS path and JS URL for the
   current page (the admin's preview, else the active build), or NULL.
 - `bootstrap_native_update_theme_scripts($theme)` (.module): the

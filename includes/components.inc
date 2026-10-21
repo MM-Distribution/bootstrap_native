@@ -157,6 +157,10 @@ function bootstrap_native_update_components_form($form, &$form_state) {
   $form['summary'] = array(
     '#markup' => '<p class="bnu-size-summary"><strong>' . t('Stylesheet:') . '</strong> ' . t('@now KB now', array('@now' => round($now / 1024))) . ($info ? ' → <strong><span class="bnu-size-new" data-now="' . (int) $now . '" data-base="' . (int) $info['base_size'] . '">' . round($now / 1024) . '</span> KB</strong> ' . t('with these choices (about)') : '') . '</p>',
   );
+  if ($info) {
+    $form['measured'] = array('#markup' => '<p class="bnu-small">' . t('Sizes and docs links measured @date.', array('@date' => format_date($info['measured'], 'short'))) . ' '
+      . l(t('Measure again'), bootstrap_native_update_action_path('measure', 'parts'), array('query' => bootstrap_native_update_action_query('measure', 'parts'))) . '</p>');
+  }
   $form['actions'] = array('#type' => 'actions');
   $form['actions']['build'] = array(
     '#type' => 'submit',

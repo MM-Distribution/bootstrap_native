@@ -23,7 +23,9 @@ function bootstrap_native_update_requirements($phase) {
   $page = url('admin/appearance/bootstrap-updates');
   if ($fallback = variable_get('bootstrap_native_update_fallback')) {
     $row['severity'] = REQUIREMENT_WARNING;
-    $row['description'] = $t("Bootstrap Native was updated and the Bootstrap build @version could not be rebuilt for it, so the site uses the theme's own files. <a href=\"@url\">Bootstrap updates</a>", array('@version' => $fallback['version'], '@url' => $page));
+    $row['description'] = isset($fallback['reason']) && $fallback['reason'] == 'files'
+      ? $t("The files of the Bootstrap build @version were missing or damaged and couldn't be made again (@error), so the site uses the theme's own files. <a href=\"@url\">Bootstrap updates</a>", array('@version' => $fallback['version'], '@error' => $fallback['error'], '@url' => $page))
+      : $t("Bootstrap Native was updated and the Bootstrap build @version could not be rebuilt for it, so the site uses the theme's own files. <a href=\"@url\">Bootstrap updates</a>", array('@version' => $fallback['version'], '@url' => $page));
   }
   elseif (variable_get('bootstrap_native_update_needs_build')) {
     $row['severity'] = REQUIREMENT_WARNING;

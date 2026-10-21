@@ -39,3 +39,9 @@
   CLAUDE.md that imports it; new sub-themes get their own pair from
   starterkit/, pointing back to the module's. "For later" notes on the
   components page's scripts and add-ons sections.
+- 2026-10-21: Missing or damaged build files repair themselves: a page
+  with its build's files gone uses the theme's own files and flags a
+  repair; cache clears and cron check the active and previous builds
+  (size and fingerprint) and rebuild what doesn't match, re-downloading
+  the release only if it's gone too. Nothing is touched when all is in
+  order. "Measure again" link on the components page.

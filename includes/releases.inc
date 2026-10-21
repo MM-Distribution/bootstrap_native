@@ -781,6 +781,116 @@ function bootstrap_native_update_cleanup() {
 }
 
 /**
+ * Whether a build's files are there and are what was built.
+ *
+ * Compares with the size and fingerprint recorded when it was made (reads
+ * the files: for cache clears and cron, not page views).
+ */
+function bootstrap_native_update_build_intact($build) {
+  if ($build === '') {
+    return TRUE;
+  }
+  $builds = bootstrap_native_update_builds();
+  if (empty($builds[$build]['meta'])) {
+    return FALSE;
+  }
+  $dir = drupal_realpath(bootstrap_native_update_build_uri($build));
+  $css = $dir ? $dir . '/bootstrap_native.css' : '';
+  $js = $dir ? $dir . '/bootstrap.bundle.min.js' : '';
+  if (!$dir || !is_file($css) || !is_file($js) || filesize($css) != $builds[$build]['meta']['size']) {
+    return FALSE;
+  }
+  return substr(md5(file_get_contents($css) . file_get_contents($js)), 0, 8) === $builds[$build]['meta']['stamp'];
+}
+
+/**
+ * Downloads a release again (checked against npm's checksum).
+ *
+ * @return string
+ *   '' when its files are back, else the problem.
+ */
+function bootstrap_native_update_fetch_release($version) {
+  $releases = variable_get('bootstrap_native_update_releases', array());
+  if (!isset($releases[$version]) && ($error = bootstrap_native_update_refresh_releases())) {
+    return $error;
+  }
+  $versions = bootstrap_native_update_versions();
+  $record = isset($versions[$version]) ? $versions[$version] : NULL;
+  foreach (array('download', 'verify', 'unpack') as $step) {
+    if ($error = _bootstrap_native_update_check_step($step, $version)) {
+      return $error;
+    }
+  }
+  // Keep when and by whom it was first downloaded, and its 30 days.
+  if ($record) {
+    bootstrap_native_update_save_version($version, array_intersect_key($record, array_flip(array('downloaded', 'uid', 'inactive_since', 'build'))));
+  }
+  return '';
+}
+
+/**
+ * Makes the files of a build again (re-downloading its release if needed).
+ *
+ * @return string
+ *   '' when the build is whole again, else the problem.
+ */
+function bootstrap_native_update_restore_build($build) {
+  $builds = bootstrap_native_update_builds();
+  if (!isset($builds[$build])) {
+    return t('Unknown build.');
+  }
+  $record = $builds[$build];
+  if (!bootstrap_native_update_release_present($record['version']) && ($error = bootstrap_native_update_fetch_release($record['version']))) {
+    return t('Bootstrap @version could not be downloaded again: @error', array('@version' => $record['version'], '@error' => $error));
+  }
+  $made = bootstrap_native_update_make_build($record['version'], $record['input']);
+  if ($made['error']) {
+    return $made['error'];
+  }
+  // The same parts made a build of another name (a sub-theme changed):
+  // the stale check sorts that out; this one stays as it was.
+  if ($made['build'] !== $build) {
+    return t('The parts changed since it was built.');
+  }
+  // Keep its check, applied and 30 days.
+  bootstrap_native_update_save_build_record($build, array_intersect_key($record, array_flip(array('check', 'applied', 'inactive_since', 'created', 'uid'))));
+  return bootstrap_native_update_build_intact($build) ? '' : t('The rebuilt files still differ.');
+}
+
+/**
+ * Repairs the active and previous builds when their files are missing or
+ * damaged (cache clears and cron).
+ *
+ * Nothing is touched when they are whole. If the active build can't be
+ * repaired, the site uses the theme's own files and the status report says
+ * why.
+ */
+function bootstrap_native_update_repair() {
+  if (variable_get('bootstrap_native_update_repair', FALSE)) {
+    variable_del('bootstrap_native_update_repair');
+  }
+  $active = bootstrap_native_update_active();
+  $previous = variable_get('bootstrap_native_update_previous', '');
+  foreach (array_unique(array_filter(array($active, $previous))) as $build) {
+    if (bootstrap_native_update_build_intact($build)) {
+      continue;
+    }
+    $error = bootstrap_native_update_restore_build($build);
+    watchdog('bootstrap_native', 'The files of the Bootstrap build @build were missing or damaged: @result', array('@build' => $build, '@result' => $error ? $error : t('rebuilt')), $error ? WATCHDOG_WARNING : WATCHDOG_NOTICE);
+    if ($error && $build === $active) {
+      bootstrap_native_update_activate('');
+      variable_set('bootstrap_native_update_fallback', array('version' => $build, 'error' => $error, 'time' => REQUEST_TIME, 'reason' => 'files'));
+    }
+    elseif ($error) {
+      bootstrap_native_update_save_build_record($build, array('error' => $error));
+    }
+    elseif ($build === $active) {
+      bootstrap_native_update_flush_assets();
+    }
+  }
+}
+
+/**
  * Brings the active build in line with the code and the sub-themes.
  *
  * After a code update (caches cleared): rebuilds when the theme's SCSS or a

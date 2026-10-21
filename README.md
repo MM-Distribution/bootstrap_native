@@ -59,6 +59,15 @@ with its own parts, is the theme's prebuilt files and needs no build.
 release is rebuilt against the new theme code; if that can't be done, the
 site goes back to the shipped release and the status report says why.
 
+**Missing or damaged files** (a site copied without its files folder, a
+cleanup): a page whose build files are gone uses the theme's own files
+instead, and flags a repair. Each cache clear and cron run checks the
+active and previous builds against the size and fingerprint recorded when
+they were made, and rebuilds any that don't match, downloading the release
+from npm again (checksum checked) only if its files are gone too. When all
+is in order nothing is touched. If a repair fails, the site stays on the
+theme's own files and the status report says why.
+
 **Settings:** offer pre-releases (on while Bootstrap 6 has no stable
 release), check daily from cron (off by default), Sass compiler path.
 

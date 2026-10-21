@@ -119,6 +119,7 @@ with sync_playwright() as p:
     ok(placeholder.is_disabled() and not placeholder.is_checked(), 'components: a clashing part is locked off')
     accordion = page.locator('tr', has_text='Accordion').locator('td.bnu-size')
     ok('KB' in accordion.inner_text(), 'components: sizes measured (%s)' % accordion.inner_text())
+    ok(page.get_by_text('Measure again').count() == 1, 'components: Measure again link')
     before = page.inner_text('.bnu-size-new')
     page.locator('tr', has_text='Accordion').locator('input[type=checkbox]').uncheck()
     page.locator('tr.bnu-group ~ tr', has_text='Margin').first.locator('input[type=checkbox]').uncheck()

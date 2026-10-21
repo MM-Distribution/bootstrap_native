@@ -25,9 +25,10 @@ function bootstrap_native_update_overview_page() {
   $available = bootstrap_native_update_available();
 
   if ($fallback = variable_get('bootstrap_native_update_fallback')) {
-    $build['fallback'] = bootstrap_native_update_notice('error', t("Bootstrap Native changed and the Bootstrap build in use could not be rebuilt for it, so the site went back to the theme's own files (Bootstrap @shipped). Check the release again to see why.", array(
-      '@shipped' => bootstrap_native_update_shipped_version(),
-    )), $fallback['error']);
+    $text = isset($fallback['reason']) && $fallback['reason'] == 'files'
+      ? t("The files of the Bootstrap build in use were missing or damaged and couldn't be made again, so the site went back to the theme's own files (Bootstrap @shipped). Roll back to it again, or check the release again, once the problem below is solved.", array('@shipped' => bootstrap_native_update_shipped_version()))
+      : t("Bootstrap Native changed and the Bootstrap build in use could not be rebuilt for it, so the site went back to the theme's own files (Bootstrap @shipped). Check the release again to see why.", array('@shipped' => bootstrap_native_update_shipped_version()));
+    $build['fallback'] = bootstrap_native_update_notice('error', $text, $fallback['error']);
   }
   if ($needs = variable_get('bootstrap_native_update_needs_build')) {
     $build['needs'] = bootstrap_native_update_notice('warning', t("A sub-theme asks for Bootstrap parts or Sass modules the theme's own files don't have, and they couldn't be built."), $needs['error']);
@@ -894,6 +895,14 @@ function bootstrap_native_update_action($op, $target) {
     case 'download':
       module_load_include('inc', 'bootstrap_native_update', 'includes/components');
       bootstrap_native_update_download_build();
+      break;
+
+    case 'measure':
+      // The components page measures again on its next visit.
+      $info = variable_get('bootstrap_native_update_part_info', array());
+      unset($info[bootstrap_native_update_active_version()]);
+      variable_set('bootstrap_native_update_part_info', $info);
+      $page = 'admin/appearance/bootstrap-components';
       break;
 
     default:

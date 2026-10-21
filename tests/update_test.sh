@@ -105,6 +105,44 @@ EV "bootstrap_native_update_activate(''); variable_del('bnu_test_selection');" >
 out="$(EV "echo var_export(variable_get('bootstrap_native_update_selection'), TRUE);")"
 [ "$out" = "NULL" ]; ok $? "rolling back to the theme's own files resets the selection"
 
+echo "== Missing or damaged files"
+EV "variable_del('bootstrap_native_update_fallback');" >/dev/null
+check 6.0.1-test.1 >/dev/null
+EV "bootstrap_native_update_save_build_record('$B1', array('applied' => REQUEST_TIME)); bootstrap_native_update_activate('$B1');" >/dev/null
+BD="$DRUPAL_ROOT/$FILES/bootstrap-native/builds/$B1"
+RD="$DRUPAL_ROOT/$FILES/bootstrap-native/releases/6.0.1-test.1"
+intact() { EV "echo bootstrap_native_update_build_intact('$B1') ? 'intact' : 'not intact', '|', bootstrap_native_update_active();"; }
+before="$(stat -c %Y "$BD/bootstrap_native.css")"
+sleep 1
+D cc all >/dev/null 2>&1
+[ "$(stat -c %Y "$BD/bootstrap_native.css")" = "$before" ] && [ "$(intact)" = "intact|$B1" ]; ok $? "a cache clear with everything in order touches nothing"
+/bin/rm -rf "$BD"
+page="$(curl -s "$BASE/user/login")"
+has "$page" "themes/bootstrap_native/css/bootstrap_native.css" && ! has "$page" "builds/$B1"; ok $? "build files gone: pages fall back to the theme's own files"
+out="$(EV "echo var_export(variable_get('bootstrap_native_update_repair', FALSE), TRUE);")"; [ "$out" = "true" ]; ok $? "and a repair is flagged ($out)"
+D cc all >/dev/null 2>&1
+[ "$(intact)" = "intact|$B1" ]; ok $? "a cache clear rebuilds them; still on $B1"
+page="$(curl -s "$BASE/user/login")"
+has "$page" "builds/$B1/bootstrap_native.css"; ok $? "pages use the build again"
+echo "/* damaged */" >> "$BD/bootstrap_native.css"
+D cc all >/dev/null 2>&1
+[ "$(intact)" = "intact|$B1" ]; ok $? "a damaged stylesheet (size and fingerprint differ) is rebuilt"
+downloaded="$(EV "\$v = bootstrap_native_update_versions(); echo \$v['6.0.1-test.1']['downloaded'];")"
+/bin/rm -rf "$BD" "$RD"
+sleep 1
+D cc all >/dev/null 2>&1
+[ -d "$RD/bootstrap/scss" ] && [ "$(intact)" = "intact|$B1" ]; ok $? "build and release both gone: downloaded again (checksum checked) and rebuilt"
+[ "$(EV "\$v = bootstrap_native_update_versions(); echo \$v['6.0.1-test.1']['downloaded'];")" = "$downloaded" ]; ok $? "the release keeps its first download date"
+mv "$DRUPAL_ROOT/$FIX/bootstrap-6.0.1-test.1.tgz" "$DRUPAL_ROOT/$FIX/held.tgz"
+/bin/rm -rf "$BD" "$RD"
+D cc all >/dev/null 2>&1
+out="$(EV "\$f = variable_get('bootstrap_native_update_fallback'); echo bootstrap_native_update_active(), '|', isset(\$f['reason']) ? \$f['reason'] : 'none';")"
+[ "$out" = "|files" ]; ok $? "the download fails: the site stays on the theme's own files and says why ($out)"
+status="$(D core-requirements --severity=1 2>&1)"
+has "$status" "missing or damaged"; ok $? "the status report explains it"
+mv "$DRUPAL_ROOT/$FIX/held.tgz" "$DRUPAL_ROOT/$FIX/bootstrap-6.0.1-test.1.tgz"
+EV "variable_del('bootstrap_native_update_fallback');" >/dev/null
+
 echo "== Sub-theme"
 out="$(D bootstrap-native-subtheme Bad-Name 2>&1)"; has "$out" "machine name"; ok $? "refuses a bad machine name"
 out="$(D bootstrap-native-subtheme bootstrap_native 2>&1)"; has "$out" "already the name"; ok $? "refuses an existing name"

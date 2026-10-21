@@ -152,6 +152,16 @@ function bootstrap_native_update_files() {
   $builds = bootstrap_native_update_builds();
   if ($build !== '' && !empty($builds[$build]['meta'])) {
     $uri = bootstrap_native_update_build_uri($build);
+    // Files gone (a copied site, a cleanup): this page uses the theme's own
+    // files instead, and the next cache clear or cron run rebuilds them.
+    $path = file_stream_wrapper_get_instance_by_uri($uri)->getDirectoryPath() . '/bootstrap-native/builds/' . $build;
+    if (!is_file(DRUPAL_ROOT . '/' . $path . '/bootstrap_native.css') || !is_file(DRUPAL_ROOT . '/' . $path . '/bootstrap.bundle.min.js')) {
+      if (!variable_get('bootstrap_native_update_repair', FALSE)) {
+        variable_set('bootstrap_native_update_repair', TRUE);
+        watchdog('bootstrap_native', 'The files of the Bootstrap build @build are missing; pages use the theme\'s own files until the next cache clear or cron run rebuilds them.', array('@build' => $build), WATCHDOG_WARNING);
+      }
+      return $files;
+    }
     $files = array(
       'build' => $build,
       'css' => file_stream_wrapper_get_instance_by_uri($uri)->getDirectoryPath() . '/bootstrap-native/builds/' . $build . '/bootstrap_native.css',
@@ -266,6 +276,7 @@ function bootstrap_native_update_form_system_theme_settings_alter(&$form, &$form
  * Implements hook_cron().
  */
 function bootstrap_native_update_cron() {
+  // Repairs run from hook_flush_caches(), which core's cron calls too.
   module_load_include('inc', 'bootstrap_native_update', 'includes/releases');
   if (variable_get('bootstrap_native_update_daily', 0) && variable_get('bootstrap_native_update_checked', 0) < REQUEST_TIME - 86400 + 600) {
     bootstrap_native_update_refresh_releases();
@@ -276,11 +287,14 @@ function bootstrap_native_update_cron() {
 /**
  * Implements hook_flush_caches().
  *
- * After a code update (caches cleared), rebuilds the active release against
- * the new theme code; see bootstrap_native_update_rebuild_if_stale().
+ * Repairs builds whose files are missing or damaged, then rebuilds the
+ * active one if the code or the sub-themes changed. Nothing happens when
+ * all is in order. See bootstrap_native_update_repair() and
+ * bootstrap_native_update_rebuild_if_stale().
  */
 function bootstrap_native_update_flush_caches() {
   module_load_include('inc', 'bootstrap_native_update', 'includes/releases');
+  bootstrap_native_update_repair();
   bootstrap_native_update_rebuild_if_stale();
   return array();
 }
