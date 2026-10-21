@@ -266,7 +266,7 @@ function bootstrap_native_settings_logo(&$form, $theme) {
   );
   $element['fields']['logo_upload'] = $form['logo']['settings']['logo_upload'];
   $element['fields']['logo_upload']['#title'] = t('Logo');
-  $element['fields']['logo_upload']['#description'] = t('Shown in the header. SVG or PNG, about 200 × 60 px.');
+  $element['fields']['logo_upload']['#description'] = t('Shown in the header. PNG, JPG or GIF, about 200 × 60 px (twice that for sharp screens).');
   if ($logo) {
     $element['fields']['bn_logo_remove'] = array(
       '#type' => 'checkbox',

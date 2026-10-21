@@ -325,6 +325,22 @@ function bootstrap_native_color_shift(array $color, $amount) {
 }
 
 /**
+ * The automatic link hover color: a clear step from the link.
+ *
+ * Further from the background (darker on a light one, lighter on a dark
+ * one) by 0.18 in OKLCH lightness, enough to see; a link already close to
+ * black (or white) steps the other way instead, kept readable.
+ */
+function bootstrap_native_color_hover(array $link, array $base, $dark) {
+  list($l) = bootstrap_native_color_oklch($link);
+  $step = $dark ? 0.18 : -0.18;
+  if ($l + $step < 0.12 || $l + $step > 0.97) {
+    $step = -$step;
+  }
+  return bootstrap_native_color_readable(bootstrap_native_color_shift($link, $step), $base, 4.5);
+}
+
+/**
  * Whether a background color calls for the dark color scheme.
  */
 function bootstrap_native_color_is_dark(array $bg) {
@@ -423,8 +439,7 @@ function bootstrap_native_color_tokens(array $settings) {
     $vars['--bs-link-hover-color'] = $hex($readable('link_hover', $color['link_hover'], $base, 4.5));
   }
   elseif ($link) {
-    // A step further from the background than the link itself.
-    $vars['--bs-link-hover-color'] = $hex(bootstrap_native_color_readable(bootstrap_native_color_shift($link, $dark ? 0.1 : -0.1), $base, 4.5));
+    $vars['--bs-link-hover-color'] = $hex(bootstrap_native_color_hover($link, $base, $dark));
   }
 
   return array(

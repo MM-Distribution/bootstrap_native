@@ -66,5 +66,14 @@ check('named: is_name tells names from hex', bootstrap_native_color_is_name('tea
 $named = bootstrap_native_color_tokens(array('primary' => 'indigo-600'));
 check('named: tokens use the worked-out hex', $named['vars']['--bs-primary-base'] === '#5d31cb');
 
+// The automatic hover is a clear step from the link (about 0.18 in OKLCH
+// lightness), the other way for a link already near black.
+foreach (array(array('#f19c21', '#ffffff'), array('#0d6efd', '#ffffff'), array('#222222', '#ffffff'), array('#f19c21', '#14181f')) as $case) {
+  $t = bootstrap_native_color_tokens(array('primary' => $case[0], 'base' => $case[1]));
+  list($ll) = bootstrap_native_color_oklch(bootstrap_native_color_parse($t['vars']['--bs-link-color']));
+  list($hl) = bootstrap_native_color_oklch(bootstrap_native_color_parse($t['vars']['--bs-link-hover-color']));
+  check("hover: {$case[0]} on {$case[1]} steps at least 0.15 and stays readable", abs($hl - $ll) >= 0.15 && bootstrap_native_color_contrast(bootstrap_native_color_parse($t['vars']['--bs-link-hover-color']), bootstrap_native_color_parse($case[1])) >= 4.5);
+}
+
 print $failures ? "$failures failed\n" : "all passed\n";
 exit($failures ? 1 : 0);

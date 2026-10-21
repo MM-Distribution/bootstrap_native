@@ -58,3 +58,6 @@
   bar with unsaved changes and Reset as a link. Colors take Bootstrap's
   names (orange, indigo-600), kept as typed; the update check flags a name
   a release drops.
+- 2026-10-21: The automatic link hover color is a clearer step from the link
+  (0.18 in OKLCH lightness, was 0.1; the other way for a link near black).
+  The logo hint says PNG, JPG or GIF (Drupal 7 refuses SVG uploads there).
