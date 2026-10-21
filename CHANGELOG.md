@@ -9,3 +9,9 @@
   menus, navbar with a phone drawer, layout following the sidebars. Color
   settings (primary, secondary, base, text, link, link hover) with a live
   preview and readability adjustments. Tests: color math, page checks.
+- 2026-10-20: One folder installed as a module (`bootstrap_native_update`,
+  shown as "Bootstrap Native"); the theme moved to `themes/bootstrap_native/`
+  and is registered through `hook_system_theme_info()`. The module can't be
+  disabled while the theme or a sub-theme is enabled. The build moved from
+  Python to PHP (`includes/build.inc`, same output byte for byte); the SCSS
+  loads Bootstrap through the load path (`bootstrap/scss/...`).

@@ -14,15 +14,15 @@
 // Bootstrap 6's own checkbox markup is the same as Drupal's (input, then
 // label, in one wrapper), so nothing has to move.
 
-@use "../vendor/bootstrap/scss/forms/labels";
-@use "../vendor/bootstrap/scss/forms/form-control";
-@use "../vendor/bootstrap/scss/forms/check";
-@use "../vendor/bootstrap/scss/forms/radio";
-@use "../vendor/bootstrap/scss/forms/form-field";
-@use "../vendor/bootstrap/scss/forms/validation";
-@use "../vendor/bootstrap/scss/forms/input-group";
-@use "../vendor/bootstrap/scss/buttons";
-@use "../vendor/bootstrap/scss/helpers";
+@use "bootstrap/scss/forms/labels";
+@use "bootstrap/scss/forms/form-control";
+@use "bootstrap/scss/forms/check";
+@use "bootstrap/scss/forms/radio";
+@use "bootstrap/scss/forms/form-field";
+@use "bootstrap/scss/forms/validation";
+@use "bootstrap/scss/forms/input-group";
+@use "bootstrap/scss/buttons";
+@use "bootstrap/scss/helpers";
 
 @layer custom {
   // Fields.

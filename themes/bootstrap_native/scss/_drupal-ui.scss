@@ -2,12 +2,12 @@
 // menus, tables, progress bars. Markup as Drupal core writes it, except
 // where includes/*.inc adds Bootstrap classes (tabs, breadcrumb, tables).
 
-@use "../vendor/bootstrap/scss/alert";
-@use "../vendor/bootstrap/scss/pagination";
-@use "../vendor/bootstrap/scss/buttons";
-@use "../vendor/bootstrap/scss/helpers";
-@use "../vendor/bootstrap/scss/content/tables";
-@use "../vendor/bootstrap/scss/nav";
+@use "bootstrap/scss/alert";
+@use "bootstrap/scss/pagination";
+@use "bootstrap/scss/buttons";
+@use "bootstrap/scss/helpers";
+@use "bootstrap/scss/content/tables";
+@use "bootstrap/scss/nav";
 
 @layer custom {
   // Status messages (theme_status_messages(), with a role added).

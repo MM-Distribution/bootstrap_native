@@ -1,0 +1,53 @@
+<?php
+
+/**
+ * @file
+ * Bootstrap Native: provides the theme (in themes/bootstrap_native, so one
+ * git pull or download updates theme and module together) and the
+ * Bootstrap updates page.
+ */
+
+/**
+ * Implements hook_system_theme_info().
+ *
+ * Drupal only looks for themes in themes/ folders; this tells it about the
+ * one inside this module.
+ */
+function bootstrap_native_update_system_theme_info() {
+  return array(
+    'bootstrap_native' => drupal_get_path('module', 'bootstrap_native_update') . '/themes/bootstrap_native/bootstrap_native.info',
+  );
+}
+
+/**
+ * Implements hook_system_info_alter().
+ *
+ * Disabling the module would remove the theme, so it can't be disabled
+ * while Bootstrap Native or a sub-theme of it is enabled.
+ */
+function bootstrap_native_update_system_info_alter(&$info, $file, $type) {
+  if ($type == 'module' && $file->name == 'bootstrap_native_update' && ($themes = bootstrap_native_update_themes_in_use())) {
+    $info['required'] = TRUE;
+    $info['explanation'] = format_plural(count($themes), 'The theme @themes uses it', 'The themes @themes use it', array('@themes' => implode(', ', $themes)));
+  }
+}
+
+/**
+ * Enabled themes that are Bootstrap Native or built on it.
+ *
+ * @return array
+ *   Theme names (human-readable), keyed by machine name.
+ */
+function bootstrap_native_update_themes_in_use() {
+  $themes = list_themes();
+  $in_use = array();
+  foreach ($themes as $key => $theme) {
+    if (!$theme->status) {
+      continue;
+    }
+    if ($key == 'bootstrap_native' || (!empty($theme->info['base theme']) && array_key_exists('bootstrap_native', drupal_find_base_themes($themes, $key)))) {
+      $in_use[$key] = $theme->info['name'];
+    }
+  }
+  return $in_use;
+}

@@ -2,14 +2,30 @@
 
 A Drupal 7 base theme: Bootstrap 6 styling on Drupal's own markup.
 
+## Installing
+
+One folder, installed like a module: `sites/all/modules/bootstrap_native`
+(a `git pull` or a new download updates everything). Enable the module
+**Bootstrap Native** (`bootstrap_native_update`); the theme then appears
+under Appearance. The theme lives in `themes/bootstrap_native/` inside the
+folder, and the module tells Drupal about it (`hook_system_theme_info()`),
+so the module can't be disabled while the theme or a sub-theme of it is
+enabled.
+
+    bootstrap_native_update.*   the module
+    includes/                   the module's code (build.inc: the build)
+    themes/bootstrap_native/    the theme
+    build/                      developer build
+    tests/                      tests
+
 ## Why
 
 Drupal Bootstrap (7.x-3.x, Bootstrap 3) rebuilds Drupal's form markup to
 match Bootstrap's: checkboxes inside their labels, descriptions as
 `.help-block`, fieldsets as panels, inputs as `<button>`, extra input-group
 wrappers. Modules and their JavaScript expect core's markup, so sites ended
-up undoing parts of it (asd_bs's `template.php` moves inputs back out of
-labels).
+up undoing parts of it in their sub-themes (moving inputs back out of
+labels, for one).
 
 This theme keeps Drupal's markup (structure, classes, IDs) and brings
 Bootstrap's look to it instead:
@@ -17,7 +33,7 @@ Bootstrap's look to it instead:
 - The stylesheet extends Bootstrap's rules onto Drupal's classes
   (`.form-text` gets `.form-control`'s styles, `.form-checkbox` gets
   `.check`'s, `div.messages.error` gets `.alert.theme-danger`'s). See
-  `scss/_drupal-forms.scss` and `scss/_drupal-ui.scss`.
+  `themes/bootstrap_native/scss/_drupal-forms.scss` and `_drupal-ui.scss`.
 - Template overrides only add Bootstrap classes or accessibility attributes
   and call core's own function for the rest: buttons, tabs, breadcrumb,
   tables, status messages (`includes/`).
@@ -43,7 +59,7 @@ Use `class="bs-menu"` for a Bootstrap dropdown menu in your own markup.
 
 Settings: primary, secondary, base (background), text, link, link hover;
 all optional (empty = Bootstrap's own). The theme works out the rest in
-`includes/color.inc` (OKLCH math, output as Bootstrap's CSS variables):
+the theme's `includes/color.inc` (OKLCH math, output as Bootstrap's CSS variables):
 
 - Brand colors used as backgrounds stay exact; the text on them is white or
   black, whichever reads.
@@ -55,20 +71,24 @@ all optional (empty = Bootstrap's own). The theme works out the rest in
 
 ## Building
 
-The compiled `css/bootstrap_native.css` and `js/bootstrap.bundle.min.js` are in
-the repository; sites need no build tools. To change the SCSS or update
-Bootstrap:
+The compiled `css/bootstrap_native.css` and `js/bootstrap.bundle.min.js`
+(in the theme folder) are in the repository; sites need no build tools. To
+change the SCSS or the shipped Bootstrap:
 
     build/build.sh          # compressed
     build/build.sh --dev    # readable
 
-Needs [Dart Sass](https://sass-lang.com/install) (standalone, no Node;
-here `~/tools/dart-sass`) and Python 3. `build/postprocess.py` adds
-Bootstrap's `--bs-` prefix to custom properties (as Bootstrap's own build
-does) and renames `.menu`; it fails if Bootstrap changed in a way it
-doesn't expect.
+Needs [Dart Sass](https://sass-lang.com/install) (standalone, no Node):
+`SASS=/path/to/sass`, `sites/all/libraries/dart-sass`, `sass` on the PATH
+or `~/tools/dart-sass`. The build (`includes/build.inc`, shared with the
+Bootstrap updates page) adds Bootstrap's `--bs-` prefix to custom
+properties (as Bootstrap's own build does) and renames `.menu`; it fails
+if Bootstrap changed in a way it doesn't expect.
 
-Bootstrap: 6.0.0-alpha.1 in `vendor/bootstrap` (`scss/`, the minified
+The SCSS loads Bootstrap as `bootstrap/scss/...` through Sass's load path:
+the theme's `vendor/` folder, or a downloaded release.
+
+Bootstrap: 6.0.0-alpha.1 in the theme's `vendor/bootstrap` (`scss/`, the minified
 bundle, LICENSE). Needs Chrome/Edge 130+, Firefox 132+, Safari/iOS 18+.
 
 Bootstrap's JavaScript is an ES module: loaded with `<script type="module">`
@@ -93,9 +113,9 @@ blocks), color settings with preview.
 Next:
 - Dropdowns in the main menu (expanded menu items as `.bs-menu`).
 - Views: exposed filters inline, table and grid styles, the views_bootstrap
-  plugin templates (asd uses them; written for Bootstrap 3).
+  plugin templates (written for Bootstrap 3).
 - Panels / Panelizer: layouts on CSS grid, a card pane style.
 - Paragraphs: spacing between paragraph items, bundle templates.
-- Ubercart pages that aren't uc_mc's (catalog, product attributes).
+- Ubercart pages (catalog, product attributes).
 - Trim the stylesheet (Bootstrap's full utility set is most of its size).
-- Sub-theme starter and the ASD sub-theme.
+- Bootstrap updates page and sub-theme generator (in progress).

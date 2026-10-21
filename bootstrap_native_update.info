@@ -1,0 +1,6 @@
+name = Bootstrap Native
+description = Provides the Bootstrap Native theme (Bootstrap 6 on Drupal's own markup) and checks new Bootstrap releases for breaks before they are applied.
+core = 7.x
+package = Bootstrap Native
+version = 7.x-1.0-dev
+configure = admin/appearance/bootstrap-updates

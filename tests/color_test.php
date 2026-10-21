@@ -2,10 +2,10 @@
 
 /**
  * @file
- * Tests of includes/color.inc (plain PHP: php tests/color_test.php).
+ * Tests of the theme's includes/color.inc (plain PHP: php tests/color_test.php).
  */
 
-require dirname(__DIR__) . '/includes/color.inc';
+require dirname(__DIR__) . '/themes/bootstrap_native/includes/color.inc';
 
 $failures = 0;
 function check($name, $ok) {
