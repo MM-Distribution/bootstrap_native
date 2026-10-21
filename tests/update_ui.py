@@ -109,7 +109,12 @@ with sync_playwright() as p:
     # Components: measured on the first visit, then chosen, built, checked.
     page.goto(base + '/admin/appearance/bootstrap-components')
     page.wait_for_url('**/admin/appearance/bootstrap-components', timeout=180000)
-    page.wait_for_selector('.bnu-parts', timeout=30000)
+    try:
+        page.wait_for_selector('.bnu-parts', timeout=30000)
+    except Exception:
+        page.screenshot(path=out + '/fail-components.png', full_page=True)
+        print('FAIL  components page did not show its parts (' + page.url + '): ' + page.inner_text('body')[:300].replace('\n', ' '))
+        raise
     otp = page.locator('tr', has_text='OTP input')
     ok(otp.locator('a.bnu-docs').get_attribute('href') == 'https://getbootstrap.com/docs/6.0/forms/otp-input/', 'components: docs link for OTP input')
     ok(otp.locator('a.bnu-docs').get_attribute('title') == 'Docs and examples', 'components: docs icon has its tooltip')

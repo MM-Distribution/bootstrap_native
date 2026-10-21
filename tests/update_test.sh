@@ -27,6 +27,18 @@ SHIPPED="$(cat "$DIR/themes/bootstrap_native/vendor/bootstrap/VERSION")"
 DEFAULT="$(D ev 'echo variable_get("theme_default", "bartik");')"
 BASE_STATUS="$(D ev '$t = list_themes(TRUE); echo $t["bootstrap_native"]->status;')"
 
+# The admin theme (if this site uses it) is put aside while the tests run:
+# its fixed parts would add a theme build to every result.
+ADMIN_WAS="$(D ev 'echo variable_get("admin_theme", "");' 2>/dev/null)"
+ADMIN_STATUS="$(D ev '$t = list_themes(TRUE); echo isset($t["bootstrap_native_admin"]) ? $t["bootstrap_native_admin"]->status : 0;' 2>/dev/null)"
+restore_admin() {
+  if [ "$ADMIN_STATUS" = 1 ]; then
+    D ev "system_rebuild_theme_data(); theme_enable(array('bootstrap_native_admin'));" >/dev/null 2>&1
+  fi
+  if [ -n "$ADMIN_WAS" ]; then D vset admin_theme "$ADMIN_WAS" >/dev/null 2>&1; else D vdel -y admin_theme >/dev/null 2>&1; fi
+}
+[ "$ADMIN_STATUS" = 1 ] && D ev "theme_disable(array('bootstrap_native_admin'));" >/dev/null 2>&1
+
 cleanup() {
   [ -n "${SETTINGS_SAVED:-}" ] && D ev "variable_set('theme_${DEFAULT}_settings', variable_get('bnu_test_settings')); variable_del('bnu_test_settings');" >/dev/null 2>&1
   D vset theme_default "$DEFAULT" >/dev/null 2>&1
@@ -38,7 +50,7 @@ cleanup() {
   sed -i '/^\/\/ bnu-test$/d' "$DIR/themes/bootstrap_native/scss/_layout.scss"
   D cc all >/dev/null 2>&1
 }
-trap cleanup EXIT
+trap "cleanup; restore_admin" EXIT
 cleanup
 # The browser tests change the theme's colors: keep them to put back.
 D ev "variable_set('bnu_test_settings', variable_get('theme_${DEFAULT}_settings', array()));" >/dev/null 2>&1
@@ -298,6 +310,42 @@ out="$(EV "echo count(bootstrap_native_update_theme_builds()), '|', bootstrap_na
 D ev "db_delete('system')->condition('name', '$FX')->execute(); variable_del('theme_${FX}_settings');" >/dev/null 2>&1
 /bin/rm -rf "${F:?}"
 
+echo "== Admin theme"
+D ev "system_rebuild_theme_data(); theme_enable(array('bootstrap_native_admin'));" >/dev/null 2>&1
+D vset admin_theme bootstrap_native_admin >/dev/null 2>&1
+out="$(EV "\$m = bootstrap_native_update_theme_builds(); echo bootstrap_native_update_parts_mode('bootstrap_native_admin'), '|', isset(\$m['bootstrap_native_admin']) ? 'built' : 'none';")"
+[ "$out" = "fixed|built" ]; ok $? "the admin theme ships with fixed parts and gets its build ($out)"
+out="$(D ev "echo implode(',', db_query(\"SELECT CONCAT(module, ':', delta) FROM {block} WHERE theme = 'bootstrap_native_admin' AND status = 1 ORDER BY module, delta\")->fetchCol());")"
+[ "$out" = "system:help,system:main" ] || [ "$out" = "system:main" ]; ok $? "only the page's content and help blocks show in it ($out)"
+out="$(LOGIN="$(D uli --name="${TEST_USER:-claude}" --no-browser 2>/dev/null)" PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH:-/opt/playwright/browsers}" "${PYTHON:-/opt/playwright/bin/python}" -c '
+import os, sys
+from playwright.sync_api import sync_playwright
+base, out = sys.argv[1], sys.argv[2]
+with sync_playwright() as p:
+    b = p.chromium.launch(); pg = b.new_page(viewport={"width": 1440, "height": 1000}); errors = []
+    pg.on("pageerror", lambda e: errors.append(str(e)))
+    pg.goto(os.environ["LOGIN"]); pg.goto(base + "/admin/content")
+    band = pg.locator(".bna-band")
+    checks = [band.count() == 1, band.locator("h1").inner_text() == "Content", band.locator("ul.tabs.primary .nav-link.active").count() == 1, band.locator(".bna-view-site").count() == 1]
+    pg.screenshot(path=out + "/15-admin-content.png")
+    pg.goto(base + "/admin/appearance")
+    entry = pg.locator(".theme-selector", has_text="Bootstrap Native Admin").first
+    checks.append(entry.get_by_text("Set default").count() == 0 and "administration theme" in entry.inner_text())
+    pg.set_viewport_size({"width": 390, "height": 844})
+    widths = []
+    for path in ("/admin/content", "/admin/people", "/admin/appearance", "/node/add/article", "/admin/appearance/bootstrap-components"):
+        pg.goto(base + path)
+        widths.append(pg.evaluate("document.documentElement.scrollWidth"))
+    pg.goto(base + "/admin/content")
+    checks.append(pg.locator("details.bna-filters").count() == 1)
+    pg.screenshot(path=out + "/15-admin-phone.png")
+    print("".join("1" if c else "0" for c in checks), max(widths) <= 390, len(errors))
+    b.close()
+' "$BASE" "${OUT:-/tmp}" 2>&1 | tail -1)"
+[ "$out" = "111111 True 0" ]; ok $? "admin pages: the band (title, tabs, View site), no Set default on Appearance, phones fit and fold the filters, no script errors ($out)"
+D vdel -y admin_theme >/dev/null 2>&1
+D ev "theme_disable(array('bootstrap_native_admin'));" >/dev/null 2>&1
+
 echo "== Pages (browser)"
 EV "bootstrap_native_update_activate(''); foreach (array_keys(bootstrap_native_update_builds()) as \$b) bootstrap_native_update_discard_build(\$b); foreach (array_keys(bootstrap_native_update_versions()) as \$v) bootstrap_native_update_discard_release(\$v); bootstrap_native_update_refresh_releases();" >/dev/null
 SHOTS="${OUT:-$(mktemp -d)}"
@@ -307,7 +355,7 @@ ok "${PIPESTATUS[0]}" "pages: all browser checks (screenshots: $SHOTS)"
 
 echo "== Back to the theme's own files"
 cleanup
-trap - EXIT
+trap restore_admin EXIT
 out="$(EV "echo bootstrap_native_update_active_version(), '|', count(bootstrap_native_update_versions()), '|', count(bootstrap_native_update_builds());")"
 [ "$out" = "$SHIPPED|0|0" ]; ok $? "shipped release active, no test releases or builds left ($out)"
 

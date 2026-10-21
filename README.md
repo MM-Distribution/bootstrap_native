@@ -166,6 +166,32 @@ settings (colors, logo). The machine name is checked
 (`[a-z][a-z0-9_]{1,31}`, not taken, folder not there); the human name is
 cleaned to one line of plain text and never goes into PHP.
 
+## The admin theme
+
+*Bootstrap Native Admin* (`bootstrap_native_admin`) ships in the same
+folder: an administration theme with its own layout and colors, nothing
+taken from the site's theme. Enable it on Appearance and choose it as the
+administration theme at the bottom of that page (its "Set default" link is
+removed: it isn't made for visitors).
+
+- **Page:** a band in the secondary color with View site, the breadcrumb,
+  the title, local actions (in the primary color) and the primary tabs;
+  secondary tabs, messages, help and the content under it, full width up
+  to 1360 px. Long forms get a sticky save bar; Delete goes to the far end,
+  in red. Vertical tabs are a side list with summaries.
+- **Colors:** navy band and orange actions by default (its .info
+  settings), changed on its own settings page like any theme's.
+- **Parts:** fixed in its .info, so the site-wide choice never changes
+  them (Appearance > Bootstrap components lists them).
+- **Regions:** help and content only (plus page top/bottom for toolbars).
+  The first time it is enabled, the blocks Drupal copies from the site's
+  theme are switched off (they would all land in the content region).
+- **Phones:** tabs and wide tables scroll in their own box; filters fold
+  behind "Filters", which says what they're set to; Drupal's toolbar
+  scrolls with the page instead of covering it.
+- Drupal's toolbar or admin_menu stay as they are; a toolbar of its own and
+  a dark look are for later.
+
 ## Why
 
 Drupal Bootstrap (7.x-3.x, Bootstrap 3) rebuilds Drupal's form markup to

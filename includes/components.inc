@@ -21,7 +21,9 @@ module_load_include('inc', 'bootstrap_native_update', 'includes/parts');
  */
 function bootstrap_native_update_part_info($version) {
   $info = variable_get('bootstrap_native_update_part_info', array());
-  return isset($info[$version]) ? $info[$version] : NULL;
+  // Measuring writes as it goes; it is done once "measured" is set (its
+  // last step). Someone leaving the page half way leaves only part of it.
+  return isset($info[$version]['measured']) ? $info[$version] : NULL;
 }
 
 /**
@@ -39,7 +41,8 @@ function bootstrap_native_update_components_form($form, &$form_state) {
   $sass = bootstrap_native_update_sass();
   $info = bootstrap_native_update_part_info($version);
   if (!$info && $sass && empty($form_state['input'])) {
-    // First visit for this release: measure sizes and find docs pages.
+    // First visit for this release (or a measuring left half way): measure
+    // sizes and find docs pages.
     bootstrap_native_update_measure_batch($version);
     batch_process('admin/appearance/bootstrap-components');
   }

@@ -14,8 +14,14 @@ A Drupal 7 project in one folder (`sites/all/modules/bootstrap_native`):
   6 styling on Drupal's *own* markup. It never rewrites form markup the way
   Drupal Bootstrap 7.x-3.x does; it maps Bootstrap's CSS onto Drupal's
   classes with Sass `@extend`.
+- **The admin theme** `bootstrap_native_admin`
+  (`themes/bootstrap_native_admin/`): a sub-theme for administration
+  pages with its own layout (a band with View site, breadcrumb, title,
+  actions and primary tabs; full-width content; a sticky save bar), its
+  own default colors (.info settings) and fixed Bootstrap parts. Plain CSS
+  and a small script, no Sass of its own.
 - **The module** `bootstrap_native_update` (shown as "Bootstrap Native"):
-  registers the theme, and provides the Bootstrap updates page, the
+  registers both themes, and provides the Bootstrap updates page, the
   components page, the sub-theme generator and drush commands.
 
 The module must stay enabled while the theme (or a sub-theme of it) is
@@ -60,6 +66,10 @@ should port to Backdrop CMS later: plain Drupal 7 APIs, no Composer.
       templates/              html.tpl.php, page.tpl.php
       scss/                   bootstrap_native.scss = _bootstrap-parts.scss + _drupal.scss
       css/bootstrap_native.css, js/bootstrap.bundle.min.js   prebuilt, committed
+    themes/bootstrap_native_admin/
+      bootstrap_native_admin.info   admin regions only, its colors, parts_fixed
+      template.php, templates/page.tpl.php   the band; tabs split in two rows
+      css/, js/                     layout; phones fold filters into <details>
       vendor/bootstrap/       the shipped Bootstrap release (never edit)
       theme-settings.php      color settings with live preview
     build/build.sh     developer build of the prebuilt files

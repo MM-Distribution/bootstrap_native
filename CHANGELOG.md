@@ -83,3 +83,11 @@
   build and check every theme, results per theme, one Apply for all, roll
   back returns them together; previews work per theme. The menu-rename
   check only counts fewer renamed menus than the build in use as a break.
+- 2026-10-21: Bootstrap Native Admin (`bootstrap_native_admin`), an
+  administration theme in the same folder: a band (View site, breadcrumb,
+  title, actions, primary tabs), full-width content, a sticky save bar,
+  side-list vertical tabs, phones that fold filters and keep the toolbar
+  from covering the band. Its own colors (navy and orange by default) and
+  fixed parts. On first enable the copied site blocks are switched off;
+  Appearance shows it as an administration theme without "Set default".
+  The components page measures again when a measuring was left half way.

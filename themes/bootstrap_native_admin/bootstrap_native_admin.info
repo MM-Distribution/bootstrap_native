@@ -1,0 +1,61 @@
+name = Bootstrap Native Admin
+description = An administration theme on Bootstrap Native, with its own layout and colors. Choose it as the administration theme at the bottom of this page; it isn't made to be a site's default theme.
+core = 7.x
+version = 7.x-1.0-dev
+base theme = bootstrap_native
+
+stylesheets[all][] = css/bootstrap_native_admin.css
+scripts[] = js/bootstrap_native_admin.js
+
+; Admin pages only: no header, sidebars or footer from the site to inherit.
+regions[page_top]    = Page top
+regions[help]        = Help
+regions[content]     = Content
+regions[page_bottom] = Page bottom
+
+features[] = favicon
+
+; Its own look (a navy band, orange actions), set on its own settings page;
+; nothing comes from the site's theme. Empty means Bootstrap's own.
+settings[bootstrap_native_color_primary] = '#f19c21'
+settings[bootstrap_native_color_secondary] = '#1d3557'
+settings[bootstrap_native_color_base] = ''
+settings[bootstrap_native_color_text] = ''
+settings[bootstrap_native_color_link] = ''
+settings[bootstrap_native_color_link_hover] = ''
+
+; Its own Bootstrap parts, whatever the site-wide choice is (Appearance >
+; Bootstrap components); the parts the base theme's Drupal rules use are
+; always added.
+bootstrap_native[parts_fixed] = TRUE
+bootstrap_native[parts][] = content/lists
+bootstrap_native[parts][] = content/tables
+bootstrap_native[parts][] = content/images
+bootstrap_native[parts][] = layout/containers
+bootstrap_native[parts][] = layout/grid
+bootstrap_native[parts][] = forms/switch
+bootstrap_native[parts][] = forms/form-range
+bootstrap_native[parts][] = badge
+bootstrap_native[parts][] = breadcrumb
+bootstrap_native[parts][] = card
+bootstrap_native[parts][] = dialog
+bootstrap_native[parts][] = list-group
+bootstrap_native[parts][] = spinner
+bootstrap_native[parts][] = toasts
+bootstrap_native[parts][] = transitions
+bootstrap_native[utilities][] = display
+bootstrap_native[utilities][] = flex
+bootstrap_native[utilities][] = justify-content
+bootstrap_native[utilities][] = align-items
+bootstrap_native[utilities][] = gap
+bootstrap_native[utilities][] = margin
+bootstrap_native[utilities][] = padding
+bootstrap_native[utilities][] = width
+bootstrap_native[utilities][] = height
+bootstrap_native[utilities][] = overflow
+bootstrap_native[utilities][] = visibility
+bootstrap_native[utilities][] = text-align
+bootstrap_native[utilities][] = font-size
+bootstrap_native[utilities][] = font-weight
+bootstrap_native[utilities][] = color
+bootstrap_native[utilities][] = bg-color

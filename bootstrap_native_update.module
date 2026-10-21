@@ -14,9 +14,33 @@
  * one inside this module.
  */
 function bootstrap_native_update_system_theme_info() {
+  $path = drupal_get_path('module', 'bootstrap_native_update') . '/themes';
   return array(
-    'bootstrap_native' => drupal_get_path('module', 'bootstrap_native_update') . '/themes/bootstrap_native/bootstrap_native.info',
+    'bootstrap_native' => $path . '/bootstrap_native/bootstrap_native.info',
+    'bootstrap_native_admin' => $path . '/bootstrap_native_admin/bootstrap_native_admin.info',
   );
+}
+
+/**
+ * Implements hook_system_themes_page_alter().
+ *
+ * Bootstrap Native Admin is for administration pages: no "Set default",
+ * and a note saying where to choose it.
+ */
+function bootstrap_native_update_system_themes_page_alter(&$theme_groups) {
+  foreach ($theme_groups as $state => &$themes) {
+    foreach ($themes as &$theme) {
+      if ($theme->name != 'bootstrap_native_admin') {
+        continue;
+      }
+      $theme->notes[] = t('administration theme');
+      foreach ($theme->operations as $key => $operation) {
+        if (isset($operation['href']) && strpos($operation['href'], 'admin/appearance/default') === 0 && $theme->name != variable_get('theme_default', 'bartik')) {
+          unset($theme->operations[$key]);
+        }
+      }
+    }
+  }
 }
 
 /**
@@ -387,9 +411,33 @@ function bootstrap_native_update_cron() {
  * A theme with fixed parts (the admin theme) gets its build right away.
  */
 function bootstrap_native_update_themes_enabled($theme_list) {
+  if (in_array('bootstrap_native_admin', $theme_list) && module_exists('block') && !variable_get('bootstrap_native_update_admin_blocks', FALSE)) {
+    bootstrap_native_update_admin_theme_blocks();
+  }
   module_load_include('inc', 'bootstrap_native_update', 'includes/releases');
   list_themes(TRUE);
   bootstrap_native_update_rebuild_theme_builds();
+}
+
+/**
+ * The admin theme's blocks: only the page's content and help.
+ *
+ * Drupal copies the default theme's blocks into a theme it enables, and
+ * moves those whose region the theme lacks into its content region; the
+ * admin theme has no sidebars, so the site's search, menus and footer would
+ * land in the middle of admin pages. They are switched off instead (they
+ * can be placed again on its block page). Only the first time it is
+ * enabled: blocks placed after that stay.
+ */
+function bootstrap_native_update_admin_theme_blocks() {
+  variable_set('bootstrap_native_update_admin_blocks', TRUE);
+  db_update('block')
+    ->fields(array('status' => 0, 'region' => BLOCK_REGION_NONE))
+    ->condition('theme', 'bootstrap_native_admin')
+    ->condition(db_or()
+      ->condition('module', 'system', '<>')
+      ->condition('delta', array('main', 'help'), 'NOT IN'))
+    ->execute();
 }
 
 /**

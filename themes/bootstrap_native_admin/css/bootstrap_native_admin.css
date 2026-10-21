@@ -1,0 +1,297 @@
+/**
+ * @file
+ * Bootstrap Native Admin: the band, the content area, panels, the sticky
+ * save bar. Colors are Bootstrap's variables (set from this theme's own
+ * color settings): the band is the secondary color, actions the primary.
+ *
+ * Plain CSS after Bootstrap Native's stylesheet, whose rules sit in cascade
+ * layers: these (unlayered) win without extra specificity.
+ */
+
+:root {
+  --bna-max: 1360px;
+  --bna-gutter: 24px;
+  --bna-page-bg: color-mix(in oklch, var(--bs-bg-body, #fff) 96%, var(--bs-fg-body, #1f2328));
+  --bna-band-bg: var(--bs-accent-bg, #1d3557);
+  --bna-band-fg: var(--bs-accent-contrast, #fff);
+  --bna-radius: 10px;
+}
+
+body {
+  background: var(--bna-page-bg);
+}
+
+/* The band. */
+.bna-band {
+  background: var(--bna-band-bg);
+  color: var(--bna-band-fg);
+}
+.bna-band-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: var(--bna-max);
+  margin: 0 auto;
+  padding: 14px var(--bna-gutter) 0;
+}
+.bna-band a {
+  color: inherit;
+}
+.bna-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  align-items: center;
+  font-size: 0.875rem;
+}
+.bna-view-site {
+  text-decoration: none;
+  opacity: 0.9;
+}
+.bna-view-site:hover,
+.bna-view-site:focus-visible {
+  text-decoration: underline;
+  opacity: 1;
+}
+.bna-sep {
+  opacity: 0.55;
+}
+.bna-band .breadcrumb-wrapper,
+.bna-band .breadcrumb {
+  margin: 0;
+  padding: 0;
+}
+.bna-band .breadcrumb {
+  --bs-breadcrumb-link-color: var(--bna-band-fg);
+  --bs-breadcrumb-link-hover-color: var(--bna-band-fg);
+  --bs-breadcrumb-link-hover-bg: color-mix(in oklch, var(--bna-band-fg) 14%, transparent);
+  --bs-breadcrumb-link-active-color: var(--bna-band-fg);
+  opacity: 0.85;
+}
+.bna-band .breadcrumb-divider {
+  color: inherit;
+}
+.bna-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+.bna-title {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: inherit;
+}
+/* "Edit <em>Article</em> Title": one weight, no italics. */
+.bna-title em {
+  font-style: normal;
+  font-weight: inherit;
+}
+
+/* Local actions (+ Add content): the primary color, solid. */
+ul.action-links.bna-actions {
+  flex-wrap: wrap;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+ul.action-links.bna-actions a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--bs-primary-bg, #f19c21);
+  color: var(--bs-primary-contrast, #000);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: normal;
+}
+ul.action-links.bna-actions a:hover,
+ul.action-links.bna-actions a:focus-visible {
+  background: color-mix(in oklch, var(--bs-primary-bg, #f19c21) 85%, var(--bs-primary-contrast, #000));
+}
+
+/* Primary tabs in the band: the current one joins the page below. */
+.bna-band .tabs-wrapper {
+  margin: 6px 0 0;
+}
+.bna-band ul.tabs.primary {
+  /* Positioned, so "(active tab)" for screen readers (absolute) stays in
+     the scrolling row. */
+  position: relative;
+  flex-wrap: nowrap;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.bna-band ul.tabs.primary .nav-link {
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 6px 6px 0 0;
+  color: var(--bna-band-fg);
+  opacity: 0.9;
+}
+.bna-band ul.tabs.primary .nav-link:hover,
+.bna-band ul.tabs.primary .nav-link:focus-visible {
+  background: color-mix(in oklch, var(--bna-band-fg) 12%, transparent);
+  opacity: 1;
+}
+.bna-band ul.tabs.primary .nav-link.active {
+  background: var(--bna-page-bg);
+  color: var(--bs-fg-body, #1f2328);
+  font-weight: 600;
+  opacity: 1;
+}
+
+/* The content area. */
+.bna-main {
+  flex: 1 0 auto;
+  width: 100%;
+  max-width: var(--bna-max);
+  margin: 0 auto;
+  padding: 20px var(--bna-gutter) 40px;
+  box-sizing: border-box;
+}
+.bna-main > .tabs-wrapper {
+  margin-bottom: 16px;
+}
+
+/* Panels: wide tables (they scroll in their box), filters, fieldsets. */
+.bna-main .table-responsive,
+.bna-main .views-exposed-form,
+.bna-main form > div > fieldset:not(.vertical-tabs-pane):not(.collapsed),
+.bna-main .vertical-tabs {
+  background: var(--bs-bg-body, #fff);
+  border: 1px solid var(--bs-border-color, #dfe2e6);
+  border-radius: var(--bna-radius);
+}
+.bna-main .table-responsive {
+  margin-bottom: 16px;
+}
+.bna-main .table-responsive > table {
+  margin: 0;
+}
+.bna-main .views-exposed-form {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+}
+
+/* The save bar: Save and the like stay in reach on long forms; Delete
+   and other destructive buttons go to the far end, in red. */
+.bna-main form > div > .form-actions:not(.bn-savebar) {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin: 16px 0 0;
+  padding: 12px 16px;
+  background: var(--bs-bg-body, #fff);
+  border: 1px solid var(--bs-border-color, #dfe2e6);
+  border-radius: var(--bna-radius) var(--bna-radius) 0 0;
+  box-shadow: 0 -4px 16px rgb(0 0 0 / 0.06);
+}
+.bna-main .form-actions input[id^="edit-delete"],
+.bna-main .form-actions a[href$="/delete"],
+.bna-main .form-actions #edit-cancel {
+  margin-left: auto;
+}
+.bna-main .form-actions input[id^="edit-delete"],
+.bna-main .form-actions a[href$="/delete"] {
+  min-height: 2.5rem;
+  padding: 0 0.5rem;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--bs-danger-fg, #b42318);
+  text-decoration: underline;
+}
+
+/* Filters on a phone fold up (js/bootstrap_native_admin.js wraps them). */
+.bna-filters {
+  margin-bottom: 16px;
+  background: var(--bs-bg-body, #fff);
+  border: 1px solid var(--bs-border-color, #dfe2e6);
+  border-radius: var(--bna-radius);
+}
+.bna-filters > summary {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.bna-filters-state {
+  margin-left: auto;
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--bs-fg-2, #5b616b);
+}
+.bna-filters > :not(summary) {
+  margin: 0 14px 14px;
+}
+.bna-filters .views-exposed-form {
+  border: 0;
+  padding: 0;
+}
+
+@media (max-width: 47.99rem) {
+  :root {
+    --bna-gutter: 16px;
+  }
+  .bna-band-inner {
+    padding-top: 12px;
+  }
+  .bna-title {
+    font-size: 1.5rem;
+  }
+  /* On a phone the breadcrumb gives way to "View site". */
+  .bna-sep,
+  .bna-band .breadcrumb-wrapper {
+    display: none;
+  }
+  /* Drupal's toolbar keeps a fixed height for its fixed bar; on a phone
+     its links wrap onto more lines and would cover the band, so it scrolls
+     with the page instead. */
+  body.toolbar,
+  body.toolbar-drawer {
+    padding-top: 0 !important;
+  }
+  #toolbar.toolbar {
+    position: static;
+    margin: 0;
+    box-sizing: border-box;
+  }
+  .bna-main .container-inline > div,
+  .bna-main .container-inline .form-item {
+    display: block;
+    max-width: 100%;
+  }
+  /* Core's filters sit side by side at a fixed width. */
+  .bna-main .exposed-filters .filters,
+  .bna-main .exposed-filters .additional-filters {
+    float: none;
+    width: auto;
+    margin-right: 0;
+  }
+}
+
+.bna-main select {
+  max-width: 100%;
+}
+
+/* Vertical tabs: the open one is marked with the primary color. */
+.bna-main .vertical-tabs-list .vertical-tab-button.selected a {
+  box-shadow: inset 3px 0 0 var(--bs-primary-bg, #f19c21);
+}
