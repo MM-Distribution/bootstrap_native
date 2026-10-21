@@ -51,3 +51,10 @@
   name, made the default); a site on Bootstrap Native itself is offered
   "Move to your own theme" (settings, blocks; the base theme is disabled).
   The color settings preview uses the active build's stylesheet.
+- 2026-10-21: Theme settings redesigned (approved mockup): five steps
+  (brand, page, links, header, browser icon) beside a sticky preview with
+  Page / Form / Messages samples (opens over the page on a phone), notes
+  under each color (automatic hex, adjustments), Set / Automatic, a save
+  bar with unsaved changes and Reset as a link. Colors take Bootstrap's
+  names (orange, indigo-600), kept as typed; the update check flags a name
+  a release drops.

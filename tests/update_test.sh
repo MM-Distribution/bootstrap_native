@@ -27,6 +27,7 @@ DEFAULT="$(D ev 'echo variable_get("theme_default", "bartik");')"
 BASE_STATUS="$(D ev '$t = list_themes(TRUE); echo $t["bootstrap_native"]->status;')"
 
 cleanup() {
+  [ -n "${SETTINGS_SAVED:-}" ] && D ev "variable_set('theme_${DEFAULT}_settings', variable_get('bnu_test_settings')); variable_del('bnu_test_settings');" >/dev/null 2>&1
   D vset theme_default "$DEFAULT" >/dev/null 2>&1
   [ "$BASE_STATUS" = 1 ] || D ev "theme_disable(array('bootstrap_native'));" >/dev/null 2>&1
   EV "bootstrap_native_update_activate(''); foreach (array_keys(bootstrap_native_update_builds()) as \$b) bootstrap_native_update_discard_build(\$b); foreach (array_keys(bootstrap_native_update_versions()) as \$v) bootstrap_native_update_discard_release(\$v); foreach (array('registry', 'fallback', 'needs_build', 'last_build', 'selection', 'previous', 'part_info') as \$k) variable_del('bootstrap_native_update_' . \$k); variable_set('bootstrap_native_update_releases', array());" >/dev/null
@@ -37,6 +38,9 @@ cleanup() {
 }
 trap cleanup EXIT
 cleanup
+# The browser tests change the theme's colors: keep them to put back.
+D ev "variable_set('bnu_test_settings', variable_get('theme_${DEFAULT}_settings', array()));" >/dev/null 2>&1
+SETTINGS_SAVED=1
 
 python3 -I "$DIR/tests/make_fixtures.py" "$DIR/themes/bootstrap_native/vendor/bootstrap" "$DRUPAL_ROOT/$FIX" "$BASE/$FIX" >/dev/null
 D vset bootstrap_native_update_registry "$BASE/$FIX/registry.json" >/dev/null 2>&1

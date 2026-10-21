@@ -464,6 +464,16 @@ function bootstrap_native_update_check_build($build) {
   module_load_include('inc', 'bootstrap_native_update', 'includes/checks');
   $active = bootstrap_native_update_active();
   $result = bootstrap_native_update_run_checks(bootstrap_native_update_load_build($active), bootstrap_native_update_load_build($build), bootstrap_native_update_check_themes(), bootstrap_native_update_color_properties());
+  if ($result['verdict'] != 'failed') {
+    $builds = bootstrap_native_update_builds();
+    foreach (bootstrap_native_update_missing_color_names($builds[$build]['version']) as $row) {
+      // Before the size row (always last).
+      array_splice($result['rows'], -1, 0, array($row));
+      if ($result['verdict'] == 'passed') {
+        $result['verdict'] = 'check';
+      }
+    }
+  }
   $result['checked'] = REQUEST_TIME;
   $result['against'] = $active;
   bootstrap_native_update_save_build_record($build, array('check' => $result));
@@ -611,6 +621,32 @@ function _bootstrap_native_update_check_step($step, $version) {
       return '';
   }
   return t('Unknown step.');
+}
+
+/**
+ * Color settings that name a Bootstrap color the release doesn't have.
+ *
+ * Such a color would fall back to Bootstrap's own (as if empty).
+ *
+ * @return array
+ *   Check rows (status check, code color_name_missing).
+ */
+function bootstrap_native_update_missing_color_names($version) {
+  require_once bootstrap_native_update_theme_dir() . '/includes/color.inc';
+  $palette = bootstrap_native_color_palette_parse((string) @file_get_contents(bootstrap_native_update_release_dir($version) . '/bootstrap/scss/_colors.scss'));
+  $before = bootstrap_native_color_palette();
+  bootstrap_native_color_palette($palette);
+  $rows = array();
+  foreach (bootstrap_native_update_theme_objects() as $name => $theme) {
+    foreach (array('primary', 'secondary', 'base', 'text', 'link', 'link_hover') as $key) {
+      $value = theme_get_setting('bootstrap_native_color_' . $key, $name);
+      if (bootstrap_native_color_is_name($value) && !bootstrap_native_color_named($value)) {
+        $rows[] = array('check' => 'colors', 'status' => 'check', 'code' => 'color_name_missing', 'values' => array('name' => $value, 'setting' => $key, 'theme' => $theme->info['name']));
+      }
+    }
+  }
+  bootstrap_native_color_palette($before);
+  return $rows;
 }
 
 /**

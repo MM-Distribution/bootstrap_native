@@ -618,6 +618,13 @@ function bootstrap_native_update_row_text(array $row) {
       $text['where'] = t('Theme: includes/color.inc');
       break;
 
+    case 'color_name_missing':
+      $text['check'] = t('Color settings');
+      $text['changed'] = t('Color name <code>@name</code> no longer exists', array('@name' => $v['name']));
+      $text['affects'] = t("@theme's @setting color falls back to Bootstrap's own; choose another name or a hex value on its settings page", array('@theme' => $v['theme'], '@setting' => str_replace('_', ' ', $v['setting'])));
+      $text['where'] = t('Theme settings');
+      break;
+
     case 'classes_ok':
       $text['check'] = t('Classes in templates');
       $text['details'] = count($v['themes']) > 1 ? t('None removed that the theme or its sub-themes use') : t('None removed that the theme uses');

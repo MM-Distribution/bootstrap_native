@@ -83,7 +83,14 @@ should port to Backdrop CMS later: plain Drupal 7 APIs, no Composer.
 - **Custom properties** get Bootstrap's `--bs-` prefix at build. The
   theme's own use `--bn-`.
 - **Colors** come from theme settings (`includes/color.inc`: OKLCH math,
-  readable text worked out); don't hard-code brand colors in CSS.
+  readable text worked out); don't hard-code brand colors in CSS. A
+  setting is hex or a Bootstrap name (`indigo-600`), kept as typed;
+  `bootstrap_native_color_load_palette()` reads the release in use's
+  `_colors.scss` (module: `bootstrap_native_update_palette_file()`) before
+  `bootstrap_native_color_parse()` / `_tokens()` see a name. The settings
+  form (`theme-settings.php`) moves core's logo, toggles and favicon into
+  its steps (their names unchanged) and creates `$form['actions']` itself:
+  core adds Save after the theme's alter.
 - **New settings default to off**, and module UI gets a mockup first.
 
 ## How a page gets Bootstrap

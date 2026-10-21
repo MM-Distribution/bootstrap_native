@@ -196,8 +196,19 @@ Use `class="bs-menu"` for a Bootstrap dropdown menu in your own markup.
 
 ## Colors
 
-Settings: primary, secondary, base (background), text, link, link hover;
-all optional (empty = Bootstrap's own). The theme works out the rest in
+Settings (Appearance > Settings > the site's theme) come in five steps
+beside a live preview: Brand (logo, primary, secondary), Page
+(background, text), Links (link, hover), Header (what it shows), Browser
+icon; a save bar stays on screen. The preview switches between a Page, a
+Form and a Messages sample and isn't clickable; on a phone it opens over
+the page.
+
+Each color is optional (empty = automatic: worked out, or Bootstrap's
+own; the field says which hex it is) and takes a hex value or one of
+Bootstrap's color names, `orange` or `indigo-600` (16 names, shades 025 to
+975; plain = 500). Names are kept as typed and worked out from the release
+in use (its `_colors.scss`, as browsers draw Bootstrap's `color-mix()`);
+the update checks flag a name a new release drops. The theme works out the rest in
 the theme's `includes/color.inc` (OKLCH math, output as Bootstrap's CSS variables):
 
 - Brand colors used as backgrounds stay exact; the text on them is white or

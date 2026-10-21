@@ -38,6 +38,8 @@ function bootstrap_native_preprocess_html(&$variables) {
   $theme_path = drupal_get_path('theme', 'bootstrap_native');
 
   // Colors from the theme settings: Bootstrap's variables, after its CSS.
+  // Settings may name Bootstrap's colors (indigo-600): from the release in use.
+  bootstrap_native_color_load_palette();
   $tokens = bootstrap_native_color_tokens(bootstrap_native_color_settings());
   if ($tokens['vars']) {
     drupal_add_css(bootstrap_native_color_css($tokens), array(

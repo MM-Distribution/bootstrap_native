@@ -27,8 +27,9 @@ in `AGENTS.md` in the Bootstrap Native module folder, usually
   - Add another stylesheet with `stylesheets[all][] = css/other.css` in
     the .info file.
 - **Colors:** set them on Appearance > Settings > STARTERKIT_NAME
-  (primary, secondary, base, text, link, link hover). The base theme works
-  out readable text, hover and dark-mode colors from them. Don't
+  (primary, secondary, base, text, link, link hover): hex or a Bootstrap
+  color name (`indigo-600`). The base theme works out readable text,
+  hover and dark-mode colors from them. Don't
   hard-code brand colors in CSS. To override other Bootstrap variables:
   `:root { --bs-border-radius: .25rem; }`.
 - **Templates:**

@@ -218,6 +218,23 @@ function bootstrap_native_update_files() {
 }
 
 /**
+ * The scss/_colors.scss of the release the site uses (named colors).
+ */
+function bootstrap_native_update_palette_file() {
+  $active = variable_get('bootstrap_native_update_active', '');
+  $theme = drupal_get_path('module', 'bootstrap_native_update') . '/themes/bootstrap_native';
+  if ($active === '' || strpos($active, '~') === FALSE) {
+    return DRUPAL_ROOT . '/' . $theme . '/vendor/bootstrap/scss/_colors.scss';
+  }
+  $version = substr($active, 0, strrpos($active, '~'));
+  $shipped = trim((string) @file_get_contents(DRUPAL_ROOT . '/' . $theme . '/vendor/bootstrap/VERSION'));
+  if ($version === $shipped) {
+    return DRUPAL_ROOT . '/' . $theme . '/vendor/bootstrap/scss/_colors.scss';
+  }
+  return DRUPAL_ROOT . '/' . file_stream_wrapper_get_instance_by_uri('public://')->getDirectoryPath() . '/bootstrap-native/releases/' . $version . '/bootstrap/scss/_colors.scss';
+}
+
+/**
  * The build this admin is previewing, or NULL.
  */
 function bootstrap_native_update_preview() {

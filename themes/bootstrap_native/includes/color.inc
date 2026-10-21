@@ -20,13 +20,20 @@
  */
 
 /**
- * Parses a hex color ('#abc', '#aabbcc', with or without '#').
+ * Parses a color: hex ('#abc', '#aabbcc', with or without '#') or one of
+ * Bootstrap's named colors ('orange', 'indigo-600'; see
+ * bootstrap_native_color_named()).
  *
  * @return array|null
- *   array(r, g, b), each 0..1, or NULL when $value isn't a hex color.
+ *   array(r, g, b), each 0..1, or NULL when $value isn't a color.
  */
 function bootstrap_native_color_parse($value) {
-  $value = ltrim(trim((string) $value), '#');
+  $value = trim((string) $value);
+  // A name first; "abcdef" without its "#" is still hex.
+  if (preg_match('/^[a-z]+(-\d{3})?$/i', $value) && ($rgb = bootstrap_native_color_named(strtolower($value)))) {
+    return $rgb;
+  }
+  $value = ltrim($value, '#');
   if (preg_match('/^[0-9a-f]{3}$/i', $value)) {
     $value = $value[0] . $value[0] . $value[1] . $value[1] . $value[2] . $value[2];
   }
@@ -38,6 +45,97 @@ function bootstrap_native_color_parse($value) {
     hexdec(substr($value, 2, 2)) / 255,
     hexdec(substr($value, 4, 2)) / 255,
   );
+}
+
+/**
+ * Bootstrap's named colors, from a release's scss/_colors.scss.
+ *
+ * Its colors list ($blue: oklch(60% 0.24 240) ...) and the tint and shade
+ * stops ("100": 80% toward white, "600": 16% toward black; 500 is the
+ * color itself).
+ *
+ * @return array
+ *   Keys: colors (name => array(L 0..1, C, H)), tints, shades (stop =>
+ *   fraction).
+ */
+function bootstrap_native_color_palette_parse($scss) {
+  $palette = array('colors' => array(), 'tints' => array(), 'shades' => array());
+  if (preg_match('/scss-docs-start colors-list(.*?)scss-docs-end colors-list/s', $scss, $m)) {
+    preg_match_all('/\$([a-z]+):\s*oklch\(\s*([\d.]+)%\s+([\d.]+)\s+([\d.]+)\s*\)/', $m[1], $colors, PREG_SET_ORDER);
+    foreach ($colors as $color) {
+      $palette['colors'][$color[1]] = array($color[2] / 100, (float) $color[3], (float) $color[4]);
+    }
+  }
+  foreach (array('tints', 'shades') as $kind) {
+    if (preg_match('/\$color-' . $kind . ':\s*defaults\(\s*\((.*?)\)/s', $scss, $m)) {
+      preg_match_all('/"(\d{3})":\s*([\d.]+)%/', $m[1], $stops, PREG_SET_ORDER);
+      foreach ($stops as $stop) {
+        $palette[$kind][$stop[1]] = $stop[2] / 100;
+      }
+    }
+  }
+  return $palette;
+}
+
+/**
+ * The named colors in use (set once per request from the active release).
+ *
+ * @param array|null $palette
+ *   From bootstrap_native_color_palette_parse(), to set it.
+ *
+ * @return array
+ *   The palette (empty lists until one is set).
+ */
+function bootstrap_native_color_palette($palette = NULL) {
+  static $current = array('colors' => array(), 'tints' => array(), 'shades' => array());
+  if ($palette !== NULL) {
+    $current = $palette;
+  }
+  return $current;
+}
+
+/**
+ * One of Bootstrap's named colors: 'orange' (= orange-500), 'indigo-600'.
+ *
+ * Worked out as Bootstrap does: color-mix() in OKLCH with white (tints)
+ * or black (shades), which keeps the hue.
+ *
+ * @return array|null
+ *   array(r, g, b), or NULL for a name the palette doesn't have.
+ */
+function bootstrap_native_color_named($name) {
+  $palette = bootstrap_native_color_palette();
+  if (!preg_match('/^([a-z]+)(?:-(\d{3}))?$/', $name, $m) || !isset($palette['colors'][$m[1]])) {
+    return NULL;
+  }
+  list($l, $c, $h) = $palette['colors'][$m[1]];
+  $stop = isset($m[2]) ? $m[2] : '500';
+  if (isset($palette['tints'][$stop])) {
+    $f = $palette['tints'][$stop];
+    $l += (1 - $l) * $f;
+    $c *= 1 - $f;
+  }
+  elseif (isset($palette['shades'][$stop])) {
+    $f = $palette['shades'][$stop];
+    $l *= 1 - $f;
+    $c *= 1 - $f;
+  }
+  elseif ($stop !== '500') {
+    return NULL;
+  }
+  // Out-of-gamut channels are clipped, as browsers draw Bootstrap's own
+  // oklch() values (not the chroma reduction used for worked-out colors).
+  $rad = deg2rad($h);
+  return array_map(function ($channel) {
+    return max(0, min(1, $channel));
+  }, _bootstrap_native_color_from_oklab(array($l, $c * cos($rad), $c * sin($rad))));
+}
+
+/**
+ * Whether a setting value is one of Bootstrap's color names (not hex).
+ */
+function bootstrap_native_color_is_name($value) {
+  return (bool) preg_match('/^[a-z]+(-\d{3})?$/', (string) $value);
 }
 
 /**
@@ -345,4 +443,30 @@ function bootstrap_native_color_css(array $tokens) {
     $css .= $name . ':' . $value . ';';
   }
   return ':root{' . $css . '}';
+}
+
+/**
+ * Sets the palette from the release the site uses (Drupal only).
+ *
+ * The release's scss/_colors.scss: the theme's own copy, or the release a
+ * build on the Bootstrap updates page was made from. Cached per file.
+ */
+function bootstrap_native_color_load_palette() {
+  static $loaded = FALSE;
+  if ($loaded || !function_exists('cache_get')) {
+    return;
+  }
+  $loaded = TRUE;
+  $file = function_exists('bootstrap_native_update_palette_file') ? bootstrap_native_update_palette_file() : '';
+  if (!$file || !is_file($file)) {
+    $file = dirname(dirname(__FILE__)) . '/vendor/bootstrap/scss/_colors.scss';
+  }
+  $cid = 'bootstrap_native:palette:' . md5($file . ':' . @filemtime($file));
+  if ($cache = cache_get($cid)) {
+    bootstrap_native_color_palette($cache->data);
+    return;
+  }
+  $palette = bootstrap_native_color_palette_parse((string) @file_get_contents($file));
+  cache_set($cid, $palette);
+  bootstrap_native_color_palette($palette);
 }

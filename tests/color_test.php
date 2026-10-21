@@ -52,5 +52,19 @@ foreach ($dark['vars'] as $name => $value) {
 $css = bootstrap_native_color_css($tokens);
 check('css is one :root rule with hex values only', (bool) preg_match('/^:root\{color-scheme:light;(--bs-[a-z0-9-]+:#[0-9a-f]{6};)+\}$/', $css));
 
+// Bootstrap's named colors (from the shipped release; hex values as
+// Chromium draws Bootstrap's oklch() and color-mix() values).
+bootstrap_native_color_palette(bootstrap_native_color_palette_parse(file_get_contents(dirname(__DIR__) . '/themes/bootstrap_native/vendor/bootstrap/scss/_colors.scss')));
+$palette = bootstrap_native_color_palette();
+check('palette: 16 colors, 6 tints, 6 shades', count($palette['colors']) == 16 && count($palette['tints']) == 6 && count($palette['shades']) == 6);
+foreach (array('orange' => '#ff6800', 'orange-500' => '#ff6800', 'indigo-600' => '#5d31cb', 'blue-100' => '#c9eaff', 'gray-975' => '#080a0c') as $name => $hex) {
+  check("named: $name is $hex", bootstrap_native_color_hex(bootstrap_native_color_parse($name)) === $hex);
+}
+check('named: hex without # still works (abcdef, fab)', bootstrap_native_color_hex(bootstrap_native_color_parse('abcdef')) === '#abcdef' && bootstrap_native_color_hex(bootstrap_native_color_parse('fab')) === '#ffaabb');
+check('named: unknown names and stops are not colors', !bootstrap_native_color_parse('nope') && !bootstrap_native_color_parse('red-123') && !bootstrap_native_color_parse('red-'));
+check('named: is_name tells names from hex', bootstrap_native_color_is_name('teal-300') && !bootstrap_native_color_is_name('#abcdef') && !bootstrap_native_color_is_name('abcdef1'));
+$named = bootstrap_native_color_tokens(array('primary' => 'indigo-600'));
+check('named: tokens use the worked-out hex', $named['vars']['--bs-primary-base'] === '#5d31cb');
+
 print $failures ? "$failures failed\n" : "all passed\n";
 exit($failures ? 1 : 0);
