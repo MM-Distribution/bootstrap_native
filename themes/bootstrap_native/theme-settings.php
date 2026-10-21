@@ -176,8 +176,10 @@ function bootstrap_native_color_preview($form_state, $theme) {
 
   $output = '<div id="bootstrap-native-preview" class="bootstrap-native-preview">';
   $output .= '<h3>' . t('Preview') . '</h3>';
-  // The frame grows to its content (srcdoc frames are same-origin).
-  $output .= '<iframe title="' . t('Color preview') . '" srcdoc="' . check_plain($document) . '" onload="this.style.height = this.contentDocument.documentElement.scrollHeight + \'px\'"></iframe>';
+  // The frame grows to its content (srcdoc frames are same-origin). Its
+  // links and buttons are only for show: a click would load this page
+  // inside the frame ("#" resolves against the page around it).
+  $output .= '<iframe title="' . t('Color preview') . '" srcdoc="' . check_plain($document) . '" onload="var d = this.contentDocument; this.style.height = d.documentElement.scrollHeight + \'px\'; d.addEventListener(\'click\', function (e) { if (e.target.closest(\'a, button, input[type=submit]\')) { e.preventDefault(); } }); d.addEventListener(\'submit\', function (e) { e.preventDefault(); });"></iframe>';
   if ($notes) {
     $output .= '<div class="bootstrap-native-notes" role="status"><p>' . t('Adjusted to stay readable:') . '</p><ul><li>' . implode('</li><li>', $notes) . '</li></ul></div>';
   }
@@ -199,6 +201,6 @@ function bootstrap_native_color_preview_sample() {
 <div class="form-item form-type-radio"><input type="radio" id="p-r1" name="p-r" checked class="form-radio"> <label class="option" for="p-r1">Business </label></div>
 <div class="form-actions"><input type="submit" value="Save" class="form-submit btn-solid theme-primary"> <input type="submit" value="Preview" class="form-submit btn-outline theme-secondary"> <button type="button" class="btn-solid theme-accent">Accent</button></div>
 </form>
-<div class="card" style="margin-top:.5rem"><div class="card-body"><strong>A card</strong> on a panel shade, with <a href="#">a link</a>.</div></div>
+<div class="card" style="margin-top:.5rem"><div class="card-body"><p style="margin:0"><strong>A card</strong> on a panel shade, with <a href="#">a link</a>.</p></div></div>
 HTML;
 }

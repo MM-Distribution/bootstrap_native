@@ -145,6 +145,15 @@ with sync_playwright() as p:
     page.locator('tr', has_text='Shipped with the theme').get_by_text('Roll back to this version').click()
     page.wait_for_url(page_url)
 
+    # Theme settings: the color preview's links and buttons are only for
+    # show (a click used to load the whole page inside the preview).
+    page.goto(base + '/admin/appearance/settings/' + os.environ.get('THEME', 'bootstrap_native'))
+    preview = page.frame_locator('#bootstrap-native-preview iframe')
+    for text in ('Edit', 'a link', 'Undo', 'Save'):
+        preview.get_by_text(text, exact=True).first.click()
+    page.wait_for_timeout(300)
+    ok(all(f.url in ('about:srcdoc', page.url) for f in page.frames), 'settings: clicks in the preview stay in the preview')
+
     # Sub-theme form (board 9).
     page.goto(base + '/admin/appearance')
     page.click('text=Create a Bootstrap Native sub-theme')

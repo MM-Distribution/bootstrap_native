@@ -227,7 +227,7 @@ D ev "theme_disable(array('bnu_move_sub')); variable_del('theme_bnu_move_sub_set
 echo "== Pages (browser)"
 EV "bootstrap_native_update_activate(''); foreach (array_keys(bootstrap_native_update_builds()) as \$b) bootstrap_native_update_discard_build(\$b); foreach (array_keys(bootstrap_native_update_versions()) as \$v) bootstrap_native_update_discard_release(\$v); bootstrap_native_update_refresh_releases();" >/dev/null
 SHOTS="${OUT:-$(mktemp -d)}"
-LOGIN="$(D uli --name="${TEST_USER:-claude}" --no-browser 2>/dev/null)" PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH:-/opt/playwright/browsers}" \
+THEME="$DEFAULT" LOGIN="$(D uli --name="${TEST_USER:-claude}" --no-browser 2>/dev/null)" PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH:-/opt/playwright/browsers}" \
   "${PYTHON:-/opt/playwright/bin/python}" "$DIR/tests/update_ui.py" "$SHOTS" | sed '/^all passed$/d;/ failed$/d'
 ok "${PIPESTATUS[0]}" "pages: all browser checks (screenshots: $SHOTS)"
 
