@@ -1,0 +1,20 @@
+/**
+ * @file
+ * STARTERKIT: this site's styles.
+ *
+ * Loaded after Bootstrap Native's stylesheet. Bootstrap's CSS sits in
+ * cascade layers and this file doesn't, so a rule here wins over
+ * Bootstrap's without !important.
+ *
+ * Colors: set them on Appearance > Settings > (this theme) first; the theme
+ * works out readable text, hover and dark-mode colors from them. Override
+ * Bootstrap's variables here only for what the settings don't cover:
+ *
+ *   :root {
+ *     --bs-border-radius: 0.25rem;
+ *     --bs-font-sans-serif: "Open Sans", system-ui, sans-serif;
+ *   }
+ *
+ * Bootstrap's own variables: https://getbootstrap.com (Customize > CSS
+ * variables); they all start with --bs-.
+ */

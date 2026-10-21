@@ -65,15 +65,15 @@ function bootstrap_native_preprocess_html(&$variables) {
 
   // Bootstrap 6's JavaScript is an ES module (no jQuery). drupal_add_js()
   // can't write type="module", so it goes in the head as a tag; module
-  // scripts never block the page.
-  $query = '?' . variable_get('css_js_query_string', '0');
+  // scripts never block the page. It becomes window.bootstrap, announced
+  // by the bootstrap-native:ready event. The Bootstrap updates page may
+  // have switched the site to a newer build.
+  $files = function_exists('bootstrap_native_update_files') ? bootstrap_native_update_files() : NULL;
+  $bundle = $files ? $files['js'] : file_create_url($theme_path . '/js/bootstrap.bundle.min.js') . '?' . variable_get('css_js_query_string', '0');
   drupal_add_html_head(array(
     '#tag' => 'script',
-    '#attributes' => array(
-      'type' => 'module',
-      'src' => file_create_url($theme_path . '/js/bootstrap_native.js') . $query,
-    ),
-    '#value' => '',
+    '#attributes' => array('type' => 'module'),
+    '#value' => 'import(' . drupal_json_encode($bundle) . ').then(function (b) { window.bootstrap = b; document.dispatchEvent(new CustomEvent("bootstrap-native:ready", {detail: b})); });',
   ), 'bootstrap_native_bootstrap');
 }
 

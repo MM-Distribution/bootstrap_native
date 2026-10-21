@@ -3,8 +3,8 @@
 /**
  * @file
  * Bootstrap Native: provides the theme (in themes/bootstrap_native, so one
- * git pull or download updates theme and module together) and the
- * Bootstrap updates page.
+ * git pull or download updates theme and module together), the Bootstrap
+ * updates page and the sub-theme generator.
  */
 
 /**
@@ -50,4 +50,177 @@ function bootstrap_native_update_themes_in_use() {
     }
   }
   return $in_use;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function bootstrap_native_update_permission() {
+  return array(
+    'administer bootstrap native updates' => array(
+      'title' => t('Check and apply Bootstrap updates'),
+      'description' => t('Download new Bootstrap releases, check them, preview them and switch the site to them.'),
+      'restrict access' => TRUE,
+    ),
+    'create bootstrap native sub-themes' => array(
+      'title' => t('Create Bootstrap Native sub-themes'),
+      'description' => t("Writes a new theme's files into the site's themes folder."),
+      'restrict access' => TRUE,
+    ),
+  );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function bootstrap_native_update_menu() {
+  $base = array(
+    'access arguments' => array('administer bootstrap native updates'),
+    'file' => 'includes/admin.inc',
+  );
+  $items['admin/appearance/bootstrap-updates'] = array(
+    'title' => 'Bootstrap updates',
+    'description' => 'Check new Bootstrap releases for breaks before applying them.',
+    'page callback' => 'bootstrap_native_update_overview_page',
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 5,
+  ) + $base;
+  $items['admin/appearance/bootstrap-updates/result/%'] = array(
+    'title callback' => 'bootstrap_native_update_result_title',
+    'title arguments' => array(4),
+    'page callback' => 'bootstrap_native_update_result_page',
+    'page arguments' => array(4),
+  ) + $base;
+  // One-click actions; each takes a token (no request forgery).
+  $items['admin/appearance/bootstrap-updates/action/%/%'] = array(
+    'page callback' => 'bootstrap_native_update_action',
+    'page arguments' => array(4, 5),
+    'type' => MENU_CALLBACK,
+  ) + $base;
+  return $items;
+}
+
+/**
+ * The files the page should use, or NULL for the theme's own.
+ *
+ * The release being previewed (only for the admin previewing it), else the
+ * active release.
+ *
+ * @return array|null
+ *   Keys version, css (path from the Drupal root), js (URL).
+ */
+function bootstrap_native_update_files() {
+  $files = &drupal_static(__FUNCTION__, FALSE);
+  if ($files !== FALSE) {
+    return $files;
+  }
+  module_load_include('inc', 'bootstrap_native_update', 'includes/releases');
+  $files = NULL;
+  $version = bootstrap_native_update_preview();
+  if ($version === NULL) {
+    $version = bootstrap_native_update_active();
+  }
+  $versions = bootstrap_native_update_versions();
+  if ($version !== '' && !empty($versions[$version]['build'])) {
+    $uri = bootstrap_native_update_build_uri($version);
+    $stamp = $versions[$version]['build']['stamp'];
+    $files = array(
+      'version' => $version,
+      'css' => file_stream_wrapper_get_instance_by_uri($uri)->getDirectoryPath() . '/bootstrap-native/builds/' . $version . '/bootstrap_native.css',
+      'js' => file_create_url($uri . '/bootstrap.bundle.min.js') . '?' . $stamp,
+    );
+  }
+  return $files;
+}
+
+/**
+ * The release this admin is previewing, or NULL.
+ */
+function bootstrap_native_update_preview() {
+  if (empty($_SESSION['bootstrap_native_update_preview']) || !user_access('administer bootstrap native updates')) {
+    return NULL;
+  }
+  $version = $_SESSION['bootstrap_native_update_preview'];
+  $versions = variable_get('bootstrap_native_update_versions', array());
+  return !empty($versions[$version]['build']) ? $version : NULL;
+}
+
+/**
+ * Implements hook_css_alter().
+ *
+ * Swaps the theme's stylesheet for the build of the active (or previewed)
+ * release.
+ */
+function bootstrap_native_update_css_alter(&$css) {
+  $theme_css = drupal_get_path('module', 'bootstrap_native_update') . '/themes/bootstrap_native/css/bootstrap_native.css';
+  if (isset($css[$theme_css]) && ($files = bootstrap_native_update_files())) {
+    $item = $css[$theme_css];
+    $item['data'] = $files['css'];
+    unset($css[$theme_css]);
+    $css[$files['css']] = $item;
+  }
+}
+
+/**
+ * Implements hook_page_build().
+ *
+ * The preview bar, for the admin previewing a release.
+ */
+function bootstrap_native_update_page_build(&$page) {
+  $version = bootstrap_native_update_preview();
+  if ($version === NULL || path_is_admin(current_path()) && current_path() != 'admin/appearance/bootstrap-updates') {
+    return;
+  }
+  module_load_include('inc', 'bootstrap_native_update', 'includes/admin');
+  $page['page_top']['bootstrap_native_update_preview'] = bootstrap_native_update_preview_bar($version);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter() for system_theme_settings().
+ *
+ * A notice on the settings of Bootstrap Native and its sub-themes.
+ */
+function bootstrap_native_update_form_system_theme_settings_alter(&$form, &$form_state) {
+  $theme = isset($form_state['build_info']['args'][0]) ? $form_state['build_info']['args'][0] : '';
+  if (!$theme || !user_access('administer bootstrap native updates') || !array_key_exists($theme, bootstrap_native_update_themes_in_use())) {
+    return;
+  }
+  module_load_include('inc', 'bootstrap_native_update', 'includes/releases');
+  if ($release = bootstrap_native_update_available()) {
+    $form['bootstrap_native_update_notice'] = array(
+      '#type' => 'container',
+      '#attributes' => array('class' => array('messages', 'warning')),
+      '#weight' => -100,
+      'text' => array(
+        '#markup' => t('Bootstrap @new is available (this site runs @current). <a href="@url">Bootstrap updates</a>', array(
+          '@new' => $release['version'],
+          '@current' => bootstrap_native_update_active_version(),
+          '@url' => url('admin/appearance/bootstrap-updates'),
+        )),
+      ),
+    );
+  }
+}
+
+/**
+ * Implements hook_cron().
+ */
+function bootstrap_native_update_cron() {
+  module_load_include('inc', 'bootstrap_native_update', 'includes/releases');
+  if (variable_get('bootstrap_native_update_daily', 0) && variable_get('bootstrap_native_update_checked', 0) < REQUEST_TIME - 86400 + 600) {
+    bootstrap_native_update_refresh_releases();
+  }
+  bootstrap_native_update_cleanup();
+}
+
+/**
+ * Implements hook_flush_caches().
+ *
+ * After a code update (caches cleared), rebuilds the active release against
+ * the new theme code; see bootstrap_native_update_rebuild_if_stale().
+ */
+function bootstrap_native_update_flush_caches() {
+  module_load_include('inc', 'bootstrap_native_update', 'includes/releases');
+  bootstrap_native_update_rebuild_if_stale();
+  return array();
 }

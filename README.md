@@ -12,11 +12,80 @@ folder, and the module tells Drupal about it (`hook_system_theme_info()`),
 so the module can't be disabled while the theme or a sub-theme of it is
 enabled.
 
-    bootstrap_native_update.*   the module
+    bootstrap_native_update.*   the module (and its drush commands)
     includes/                   the module's code (build.inc: the build)
     themes/bootstrap_native/    the theme
+    starterkit/                 what a new sub-theme starts from
     build/                      developer build
     tests/                      tests
+
+## Bootstrap updates
+
+Appearance > Bootstrap updates (permission: *Check and apply Bootstrap
+updates*). New Bootstrap 6 releases come from npm; nothing happens until
+someone presses a button.
+
+1. **Check** a release (the newest, or one under *Older versions*):
+   download, verify npm's checksum, unpack (only `scss/`, the script bundle,
+   LICENSE, package.json; archives with links or paths outside the package
+   are refused), build the theme against it, run the checks. A few
+   seconds; visitors see no change.
+2. **Results:** passed, passed with things to look at (Check), would break
+   (Breaks: apply only after ticking *I understand*), or doesn't build
+   (nothing to apply). The checks compare with the release in use:
+   - the build itself (a removed partial, mixin or `@extend` target fails);
+   - the `.menu` rename still reaching Bootstrap's dropdown;
+   - every color variable the settings set still read where it was;
+   - classes Bootstrap dropped that the theme or an enabled sub-theme uses
+     (Breaks in the theme, Check in a sub-theme);
+   - variables used but defined nowhere; stylesheet size.
+3. **Preview:** only the admin previewing sees the new build (a bar on top
+   of the site), visitors keep the current one.
+4. **Apply** or **roll back** (instant, no rebuild). Inactive releases are
+   removed by cron 30 days after they stop being active; the release the
+   theme ships with is never removed and is always the fallback.
+
+Where things live: downloads in `public://bootstrap-native/releases/`,
+builds in `public://bootstrap-native/builds/` (per site, always writable);
+state in `bootstrap_native_update_*` variables.
+
+**After a code update** (git pull, then clearing caches) the active
+release is rebuilt against the new theme code; if that can't be done, the
+site goes back to the shipped release and the status report says why.
+
+**Settings:** offer pre-releases (on while Bootstrap 6 has no stable
+release), check daily from cron (off by default), Sass compiler path.
+
+### Sass compiler
+
+Checks need [Dart Sass](https://sass-lang.com/install), looked for at the
+path setting, `sites/all/libraries/dart-sass`, then the PATH. Without it
+releases are announced but can't be checked or applied.
+
+    drush bootstrap-native-sass             # what's installed, the newest release
+    drush bootstrap-native-sass --install   # download and unpack to sites/all/libraries/dart-sass
+    drush bootstrap-native-sass --update    # replace it; the old copy stays as dart-sass.previous
+
+The right build for the server (Linux/macOS, x64/ARM, musl), checked
+against the SHA-256 GitHub publishes, test-built with the theme before it
+is switched in (`--force` to switch anyway), and an `.htaccess` keeps the
+folder off the web. Only drush installs the compiler: web pages never
+download a program they would later run.
+
+    drush bootstrap-native-check [VERSION]  # the same check as the page
+
+## Sub-themes
+
+    drush bootstrap-native-subtheme mysite --name="My Site" [--enable|--default] [--path=sites/all/themes]
+
+Creates `sites/all/themes/mysite` from `starterkit/`: a stylesheet loaded
+after Bootstrap Native's (unlayered, so its rules win over Bootstrap's), an
+empty `template.php`, `templates/`. Regions and features are copied from
+Bootstrap Native (a D7 sub-theme doesn't inherit them), so are its theme
+settings (colors, logo). The machine name is checked
+(`[a-z][a-z0-9_]{1,31}`, not taken, folder not there); the human name is
+cleaned to one line of plain text. Permission for the (coming) web version:
+*Create Bootstrap Native sub-themes*.
 
 ## Why
 
@@ -97,15 +166,26 @@ Bootstrap's JavaScript is an ES module: loaded with `<script type="module">`
 
 ## Tests
 
-    tests/run.sh            # color math + screenshots/page checks (clauded7)
-    tests/run.sh colors     # color math only
+    tests/run.sh            # everything (on clauded7 by default)
+    tests/run.sh colors     # plain PHP only: color math, build, checks
+    tests/run.sh pages      # ...and the theme's pages
+    tests/run.sh update     # ...and Bootstrap updates
 
 Page checks fail on JavaScript errors, 4xx/5xx requests, sideways scrolling
 at phone width, or Bootstrap's JavaScript not loading.
 
+The update tests serve test releases from the site's files folder
+(`tests/make_fixtures.py`: one that passes, one that breaks, one that
+doesn't build, a tampered archive, a bad checksum) and go through every
+verdict, apply, roll back, the rebuild after a theme change and its
+fallback, cleanup, the sub-theme generator, and the page in a browser
+(check, preview, apply, roll back, the *I understand* lock, phone width).
+They leave the site on the shipped release.
+
 ## Status and next steps
 
-7.x-1.0-dev, being built on clauded7 (2026-10-20). Done: forms, fieldsets,
+7.x-1.0-dev, being built on clauded7 (2026-10-20). Done: Bootstrap updates
+page, drush commands for the compiler and sub-themes. Theme: forms, fieldsets,
 vertical tabs, messages, tabs, breadcrumb, pager, tables, menus, navbar
 with a phone drawer, page layout (columns follow the sidebars that have
 blocks), color settings with preview.
@@ -118,4 +198,4 @@ Next:
 - Paragraphs: spacing between paragraph items, bundle templates.
 - Ubercart pages (catalog, product attributes).
 - Trim the stylesheet (Bootstrap's full utility set is most of its size).
-- Bootstrap updates page and sub-theme generator (in progress).
+- Web page for creating a sub-theme (mockup first).

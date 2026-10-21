@@ -15,3 +15,13 @@
   disabled while the theme or a sub-theme is enabled. The build moved from
   Python to PHP (`includes/build.inc`, same output byte for byte); the SCSS
   loads Bootstrap through the load path (`bootstrap/scss/...`).
+- 2026-10-20: Bootstrap updates (Appearance > Bootstrap updates): release
+  list from npm, check (checksum, safe unpack, test build, checks against
+  the release in use), results, per-admin preview, apply, roll back,
+  cleanup after 30 days, rebuild after a theme change with fallback to the
+  shipped release. Status report row and theme settings notice. Drush:
+  `bootstrap-native-sass` (install/update Dart Sass with GitHub's checksum
+  and a test build), `bootstrap-native-check`, `bootstrap-native-subtheme`
+  (from `starterkit/`). The theme loads Bootstrap's script inline as a
+  module import (the loader file is gone). Tests: checks_test.php,
+  update_test.sh with test releases, update_ui.py.

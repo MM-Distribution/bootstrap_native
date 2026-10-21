@@ -1,0 +1,265 @@
+/**
+ * @file
+ * The Bootstrap updates page (in the admin theme) and the preview bar (in
+ * the site's theme). Plain CSS: the admin theme isn't Bootstrap.
+ */
+
+.bnu-section {
+  margin: 0 0 2em;
+}
+.bnu-section input.form-text,
+.bnu-section select {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.bnu-section h2 {
+  margin: 0 0 0.6em;
+}
+.bnu-table {
+  overflow-x: auto;
+  margin: 0 0 1em;
+}
+.bnu-table table {
+  margin: 0;
+}
+.bnu-card {
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  padding: 16px 20px;
+  margin: 0 0 1em;
+}
+.bnu-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+.bnu-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.bnu-label,
+.bnu-small {
+  font-size: 0.85em;
+  color: #595959;
+}
+.bnu-muted {
+  color: #595959;
+}
+.bnu-big {
+  font-size: 1.3em;
+}
+.bnu-ok {
+  color: #1e6b0f;
+  font-weight: 600;
+}
+.bnu-bad {
+  color: #a51b00;
+  font-weight: 600;
+}
+.bnu-release {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+.bnu-release > div {
+  display: contents;
+}
+.bnu-release-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.bnu-release .form-actions,
+.bnu-older .form-actions {
+  margin: 0;
+}
+.bnu-older > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: flex-end;
+  padding: 0 20px;
+}
+.bnu-older .form-item {
+  margin: 0;
+}
+.bnu-older .description {
+  flex-basis: 100%;
+}
+.bnu-badge {
+  display: inline-block;
+  padding: 0 8px;
+  border-radius: 10px;
+  font-size: 0.85em;
+  font-weight: 700;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+.bnu-badge-prerelease,
+.bnu-badge-check {
+  background: #fff1d6;
+  color: #6e4400;
+}
+.bnu-badge-breaks,
+.bnu-badge-failed {
+  background: #fbe1dd;
+  color: #7a1f12;
+}
+.bnu-badge-info {
+  background: #e8f1f8;
+  color: #0b4a75;
+}
+.bnu-icon-cell {
+  width: 40px;
+}
+.bnu-icon {
+  vertical-align: middle;
+}
+.bnu-icon-passed {
+  color: #1e6b0f;
+}
+.bnu-icon-check {
+  color: #8a5a00;
+}
+.bnu-icon-info {
+  color: #0074bd;
+}
+.bnu-pre {
+  white-space: pre-wrap;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  max-height: 16em;
+  overflow: auto;
+  margin: 0.5em 0 0;
+  font-size: 0.85em;
+}
+.bnu-confirm {
+  border: 1px solid #e3a39d;
+  border-radius: 3px;
+  background: #fffafa;
+  padding: 16px 20px;
+}
+.bnu-danger,
+.bnu-danger:hover,
+.bnu-danger:focus {
+  background: #b3261e;
+  border-color: #b3261e;
+  color: #fff;
+}
+.bnu-danger[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.bnu-link {
+  padding: 0 8px;
+}
+.bnu-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  align-items: center;
+  min-width: 11em;
+}
+.bnu-actions a {
+  white-space: nowrap;
+}
+.bnu-full {
+  flex-basis: 100%;
+  margin-top: 0.5em;
+}
+
+/* Progress page of a check. */
+.bnu-steps {
+  list-style: none;
+  margin: 0.5em 0;
+  padding: 0;
+}
+.bnu-step {
+  padding: 2px 0 2px 1.6em;
+  position: relative;
+}
+.bnu-step::before {
+  position: absolute;
+  left: 0;
+  width: 1.2em;
+  text-align: center;
+}
+.bnu-step-done::before {
+  content: "\2713";
+  color: #1e6b0f;
+  font-weight: 700;
+}
+.bnu-step-current {
+  font-weight: 600;
+}
+.bnu-step-current::before {
+  content: "\2022";
+}
+.bnu-step-waiting {
+  color: #595959;
+}
+.bnu-step-waiting::before {
+  content: "\25CB";
+}
+
+/* The preview bar, at the top of the site's own pages. */
+.bnu-preview {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: #1d2230;
+  color: #fff;
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.bnu-preview-text {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.bnu-preview-text svg {
+  flex-shrink: 0;
+}
+.bnu-preview form,
+.bnu-preview-actions > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 0;
+}
+.bnu-preview a {
+  color: #fff;
+  padding: 6px 8px;
+}
+.bnu-preview input[type="submit"] {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 6px;
+  border: 1px solid #8b93a7;
+  background: transparent;
+  color: #fff;
+  font: 600 14px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  cursor: pointer;
+  margin: 0;
+}
+.bnu-preview input[type="submit"]:first-of-type:not(:last-of-type) {
+  background: #fff;
+  border-color: #fff;
+  color: #1d2230;
+}
+.bnu-preview input[type="submit"]:focus-visible,
+.bnu-preview a:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}

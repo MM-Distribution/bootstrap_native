@@ -1,0 +1,51 @@
+<?php
+
+/**
+ * @file
+ * Status report rows and uninstall.
+ */
+
+/**
+ * Implements hook_requirements().
+ */
+function bootstrap_native_update_requirements($phase) {
+  $requirements = array();
+  if ($phase != 'runtime') {
+    return $requirements;
+  }
+  module_load_include('inc', 'bootstrap_native_update', 'includes/releases');
+  $t = get_t();
+  $row = array(
+    'title' => $t('Bootstrap (Bootstrap Native)'),
+    'value' => check_plain(bootstrap_native_update_active_version()),
+    'severity' => REQUIREMENT_OK,
+  );
+  $page = url('admin/appearance/bootstrap-updates');
+  if ($fallback = variable_get('bootstrap_native_update_fallback')) {
+    $row['severity'] = REQUIREMENT_WARNING;
+    $row['description'] = $t('Bootstrap Native was updated and Bootstrap @version could not be rebuilt for it, so the site uses the release the theme ships with. <a href="@url">Bootstrap updates</a>', array('@version' => $fallback['version'], '@url' => $page));
+  }
+  elseif (!bootstrap_native_update_sass()) {
+    $row['severity'] = REQUIREMENT_WARNING;
+    $row['description'] = $t('No Sass compiler found, so new releases can be announced but not checked or applied. Run <code>drush bootstrap-native-sass --install</code>, or download Dart Sass for this server and unpack it to <code>sites/all/libraries/dart-sass</code>, or set the path to an installed copy on the <a href="@url">Bootstrap updates page</a>.', array('@url' => $page));
+  }
+  elseif ($release = bootstrap_native_update_available()) {
+    $row['severity'] = REQUIREMENT_WARNING;
+    $row['description'] = $t('A new release is available: @version@pre. <a href="@url">Check it on the Bootstrap updates page</a>.', array(
+      '@version' => $release['version'],
+      '@pre' => $release['prerelease'] ? ' ' . $t('(pre-release)') : '',
+      '@url' => $page,
+    ));
+  }
+  $requirements['bootstrap_native_update'] = $row;
+  return $requirements;
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function bootstrap_native_update_uninstall() {
+  db_delete('variable')->condition('name', db_like('bootstrap_native_update_') . '%', 'LIKE')->execute();
+  cache_clear_all('variables', 'cache_bootstrap');
+  file_unmanaged_delete_recursive('public://bootstrap-native');
+}
