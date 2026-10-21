@@ -34,3 +34,8 @@
   Create a sub-theme from Appearance (or as a .tar.gz). The theme's SCSS
   entry is split into `_bootstrap-parts.scss` and `_drupal.scss` (same
   output).
+- 2026-10-21: AGENTS.md (notes for AI agents: layout, rules, builds and
+  state, functions, hooks, pages, drush, sub-theme keys, tests), with a
+  CLAUDE.md that imports it; new sub-themes get their own pair from
+  starterkit/, pointing back to the module's. "For later" notes on the
+  components page's scripts and add-ons sections.

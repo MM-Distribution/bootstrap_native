@@ -126,7 +126,8 @@ function bootstrap_native_update_components_form($form, &$form_state) {
     '#type' => 'container',
     '#attributes' => array('class' => array('bnu-section')),
     'title' => array('#markup' => '<h2>' . t('Scripts (JavaScript plugins)') . '</h2>'),
-    'text' => array('#markup' => '<p class="bnu-muted">' . t("Bootstrap's script is loaded as one bundle with every plugin (@size KB, loaded without holding up the page). Splitting it into single plugins needs their outside libraries too (Floating UI, Vanilla Calendar); until that's built, this list is for information. Plugins from sub-themes load next to it and can import it as <code>bootstrap</code>.", array('@size' => round(filesize(bootstrap_native_update_release_dir($version) . '/bootstrap/dist/js/bootstrap.bundle.min.js') / 1024))) . '</p>'),
+    'later' => bootstrap_native_update_later(t("Choosing single plugins comes later, as Bootstrap 6's plugins settle. For now every plugin is in one bundle and this list is for information.")),
+    'text' => array('#markup' => '<p class="bnu-muted">' . t("Bootstrap's script is loaded as one bundle with every plugin (@size KB, loaded without holding up the page). Splitting it into single plugins needs their outside libraries too (Floating UI, Vanilla Calendar). Plugins from sub-themes load next to it and can import it as <code>bootstrap</code>.", array('@size' => round(filesize(bootstrap_native_update_release_dir($version) . '/bootstrap/dist/js/bootstrap.bundle.min.js') / 1024))) . '</p>'),
     'list' => array('#markup' => '<div class="bnu-chips">' . implode('', array_map(function ($name) {
       return '<span class="bnu-badge bnu-badge-info">' . check_plain($name) . '</span>';
     }, bootstrap_native_update_bundle_plugins($version))) . '</div>'),
@@ -148,7 +149,8 @@ function bootstrap_native_update_components_form($form, &$form_state) {
     '#type' => 'container',
     '#attributes' => array('class' => array('bnu-section')),
     'title' => array('#markup' => '<h2>' . t('Add-ons') . '</h2>'),
-    'text' => array('#markup' => $extras ? theme('item_list', array('items' => $extras)) : '<p class="bnu-muted">' . t('None installed. Add-ons (Sass modules and plugins from other packages) will be managed on their own page; a sub-theme can bring its own now (<code>bootstrap_native[sass][]</code> and <code>bootstrap_native[js][]</code> in its .info file).') . '</p>'),
+    'later' => bootstrap_native_update_later(t("Add-ons from other packages come later: Bootstrap 6 is in alpha and has none yet. This section will add and update their Sass modules and plugins. A sub-theme can already bring its own (listed here when it does).")),
+    'text' => array('#markup' => $extras ? theme('item_list', array('items' => $extras)) : '<p class="bnu-muted">' . t('None installed. (A sub-theme adds its own with <code>bootstrap_native[sass][]</code> and <code>bootstrap_native[js][]</code> in its .info file.)') . '</p>'),
   );
 
   $now = bootstrap_native_update_active() === '' ? filesize(bootstrap_native_update_theme_dir() . '/css/bootstrap_native.css') : bootstrap_native_update_builds()[bootstrap_native_update_active()]['meta']['size'];
@@ -173,6 +175,13 @@ function bootstrap_native_update_components_form($form, &$form_state) {
   );
   $form['help'] = array('#markup' => '<p class="bnu-small">' . t("Docs: an icon linking to the part's page on getbootstrap.com, for the active release's docs; a part with no page found has none. Build and check runs the same checks as an update (a part the theme needs can't be left out; one a template uses shows as Check), then offers preview and apply. Download: the active build's stylesheet and script, for a site without a compiler or a sub-theme's repository.") . '</p>');
   return $form;
+}
+
+/**
+ * A "for later" note on a section that isn't working yet.
+ */
+function bootstrap_native_update_later($text) {
+  return array('#markup' => '<div class="bnu-later" role="note"><span class="bnu-badge bnu-badge-off">' . t('For later') . '</span> ' . $text . '</div>');
 }
 
 /**

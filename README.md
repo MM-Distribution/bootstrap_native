@@ -12,6 +12,8 @@ folder, and the module tells Drupal about it (`hook_system_theme_info()`),
 so the module can't be disabled while the theme or a sub-theme of it is
 enabled.
 
+    AGENTS.md                   notes for AI agents (CLAUDE.md imports it);
+                                new sub-themes get their own from starterkit/
     bootstrap_native_update.*   the module (and its drush commands)
     includes/                   the module's code (build.inc: the build,
                                 parts.inc: Bootstrap's parts)
