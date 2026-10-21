@@ -19,7 +19,8 @@ ok() { if [ "$1" = 0 ]; then echo "ok    $2"; else echo "FAIL  $2"; failures=$((
 has() { case "$1" in *"$2"*) return 0 ;; *) return 1 ;; esac; }
 
 FILES="$(D ev 'echo variable_get("file_public_path", conf_path() . "/files");')"
-FIX="$FILES/bootstrap-native-test"
+# A new folder each run, so nothing a caching proxy kept from an earlier run is served.
+FIX="$FILES/bootstrap-native-test-$(date +%s)"
 SUB="bnu_test_sub"
 B1="6.0.1-test.1~default"
 SHIPPED="$(cat "$DIR/themes/bootstrap_native/vendor/bootstrap/VERSION")"
@@ -44,6 +45,9 @@ SETTINGS_SAVED=1
 
 python3 -I "$DIR/tests/make_fixtures.py" "$DIR/themes/bootstrap_native/vendor/bootstrap" "$DRUPAL_ROOT/$FIX" "$BASE/$FIX" >/dev/null
 D vset bootstrap_native_update_registry "$BASE/$FIX/registry.json" >/dev/null 2>&1
+# A caching proxy in front of the site (nginx on cPanel) would keep serving
+# fixtures the tests remove or change; tell it not to store them.
+printf '<IfModule mod_headers.c>\n  Header set Cache-Control "no-store"\n</IfModule>\n' > "$DRUPAL_ROOT/$FIX/.htaccess"
 
 echo "== Checks"
 check() { D bootstrap-native-check "$1" 2>&1; }

@@ -441,6 +441,12 @@ function bootstrap_native_color_tokens(array $settings) {
   elseif ($link) {
     $vars['--bs-link-hover-color'] = $hex(bootstrap_native_color_hover($link, $base, $dark));
   }
+  // Menus, tabs, the navbar and the breadcrumb follow the link colors once
+  // there are any (scss/_drupal-ui.scss); without, they keep Bootstrap's greys.
+  if ($link) {
+    $vars['--bn-nav-link-color'] = $vars['--bs-link-color'];
+    $vars['--bn-nav-link-hover-color'] = $vars['--bs-link-hover-color'];
+  }
 
   return array(
     'vars' => $vars,

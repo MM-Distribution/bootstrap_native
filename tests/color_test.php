@@ -50,7 +50,7 @@ foreach ($dark['vars'] as $name => $value) {
   }
 }
 $css = bootstrap_native_color_css($tokens);
-check('css is one :root rule with hex values only', (bool) preg_match('/^:root\{color-scheme:light;(--bs-[a-z0-9-]+:#[0-9a-f]{6};)+\}$/', $css));
+check('css is one :root rule with hex values only', (bool) preg_match('/^:root\{color-scheme:light;(--b[sn]-[a-z0-9-]+:#[0-9a-f]{6};)+\}$/', $css));
 
 // Bootstrap's named colors (from the shipped release; hex values as
 // Chromium draws Bootstrap's oklch() and color-mix() values).
@@ -74,6 +74,11 @@ foreach (array(array('#f19c21', '#ffffff'), array('#0d6efd', '#ffffff'), array('
   list($hl) = bootstrap_native_color_oklch(bootstrap_native_color_parse($t['vars']['--bs-link-hover-color']));
   check("hover: {$case[0]} on {$case[1]} steps at least 0.15 and stays readable", abs($hl - $ll) >= 0.15 && bootstrap_native_color_contrast(bootstrap_native_color_parse($t['vars']['--bs-link-hover-color']), bootstrap_native_color_parse($case[1])) >= 4.5);
 }
+
+// Menus, tabs, navbar and breadcrumb follow the link colors, only once set.
+check('nav links: none without link colors', !isset($none['vars']['--bn-nav-link-color']));
+$t = bootstrap_native_color_tokens(array('link' => '#1d3557', 'link_hover' => '#f19c21'));
+check('nav links: follow link and hover', $t['vars']['--bn-nav-link-color'] === $t['vars']['--bs-link-color'] && $t['vars']['--bn-nav-link-hover-color'] === $t['vars']['--bs-link-hover-color']);
 
 print $failures ? "$failures failed\n" : "all passed\n";
 exit($failures ? 1 : 0);

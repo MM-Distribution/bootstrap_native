@@ -43,6 +43,23 @@
     font-weight: var(--font-weight-semibold, 600);
   }
 
+  // Navigation links follow the link color settings when there are any
+  // (--bn-nav-link-*, from includes/color.inc); otherwise Bootstrap's own.
+  .nav {
+    --nav-link-color: var(--bn-nav-link-color, var(--fg-2));
+    --nav-link-hover-color: var(--bn-nav-link-hover-color, var(--fg-1));
+  }
+
+  .site-header .navbar {
+    --navbar-color: var(--bn-nav-link-color, var(--fg-2));
+    --navbar-hover-color: var(--bn-nav-link-hover-color, var(--fg-1));
+  }
+
+  .breadcrumb {
+    --breadcrumb-link-color: var(--bn-nav-link-color, var(--fg-3));
+    --breadcrumb-link-hover-color: var(--bn-nav-link-hover-color, var(--fg-2));
+  }
+
   // Local tasks (tabs): Bootstrap's nav classes come from
   // bootstrap_native_menu_local_tasks(); this only spaces them.
   .tabs-wrapper {
@@ -142,13 +159,13 @@
     a {
       display: block;
       padding: .375rem .5rem;
-      color: var(--fg-1);
+      color: var(--bn-nav-link-color, var(--fg-1));
       text-decoration: none;
       border-radius: var(--radius-3, .25rem);
 
       &:hover,
       &:focus-visible {
-        color: var(--fg-body);
+        color: var(--bn-nav-link-hover-color, var(--fg-body));
         background: var(--bg-2);
       }
 

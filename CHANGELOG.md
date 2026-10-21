@@ -61,3 +61,8 @@
 - 2026-10-21: The automatic link hover color is a clearer step from the link
   (0.18 in OKLCH lightness, was 0.1; the other way for a link near black).
   The logo hint says PNG, JPG or GIF (Drupal 7 refuses SVG uploads there).
+- 2026-10-21: Menus, tabs, the navbar and the breadcrumb follow the link
+  and hover color settings (`--bn-nav-link-color`, `--bn-nav-link-hover-color`);
+  with no link colors they keep Bootstrap's greys. Tests: the update tests
+  use a new fixture folder each run and send `no-store`, so a caching proxy
+  in front of the site can't serve removed fixtures.
