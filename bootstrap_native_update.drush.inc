@@ -167,13 +167,14 @@ function drush_bootstrap_native_update_bootstrap_native_subtheme($machine) {
     return drush_set_error('BOOTSTRAP_NATIVE_SUBTHEME', implode("\n", $result['problems']));
   }
   drush_log(dt('Created !path.', array('!path' => $result['path'])), 'success');
-  system_rebuild_theme_data();
   if (drush_get_option('enable') || drush_get_option('default')) {
-    theme_enable(array($machine));
+    bootstrap_native_update_subtheme_enable($machine, (bool) drush_get_option('default'));
     drush_log(dt('Enabled !name.', array('!name' => $machine)), 'ok');
+    if (drush_get_option('default')) {
+      drush_log(dt('!name is the default theme.', array('!name' => $machine)), 'ok');
+    }
   }
-  if (drush_get_option('default')) {
-    variable_set('theme_default', $machine);
-    drush_log(dt('!name is the default theme.', array('!name' => $machine)), 'ok');
+  else {
+    system_rebuild_theme_data();
   }
 }

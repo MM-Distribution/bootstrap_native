@@ -153,7 +153,10 @@ function bootstrap_native_color_preview($form_state, $theme) {
   }
   $tokens = bootstrap_native_color_tokens($settings);
 
-  $css_url = file_create_url(drupal_get_path('theme', 'bootstrap_native') . '/css/bootstrap_native.css') . '?' . variable_get('css_js_query_string', '0');
+  // The stylesheet the site uses (a build from the Bootstrap updates page,
+  // or the theme's own).
+  $files = function_exists('bootstrap_native_update_files') ? bootstrap_native_update_files() : NULL;
+  $css_url = file_create_url($files ? $files['css'] : drupal_get_path('theme', 'bootstrap_native') . '/css/bootstrap_native.css') . '?' . variable_get('css_js_query_string', '0');
   $document = '<!DOCTYPE html><html lang="en" data-bs-theme="' . $tokens['scheme'] . '"><head><meta charset="utf-8">'
     . '<link rel="stylesheet" href="' . check_plain(file_create_url('modules/system/system.base.css')) . '">'
     . '<link rel="stylesheet" href="' . check_plain($css_url) . '">'

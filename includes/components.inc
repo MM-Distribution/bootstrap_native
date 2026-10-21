@@ -56,6 +56,7 @@ function bootstrap_native_update_components_form($form, &$form_state) {
   $form['#attached'] = bootstrap_native_update_admin_css();
   $form['#attached']['js'][] = drupal_get_path('module', 'bootstrap_native_update') . '/js/components.js';
   $form['#attributes']['class'][] = 'bnu-components';
+  $form['site_theme'] = bootstrap_native_update_site_theme_prompt();
   $form['intro'] = array('#markup' => '<p class="bnu-intro">' . t("What goes into this site's Bootstrap build. The list comes from the active release (@version), so a new release brings its own parts. Changes are built and checked like an update: preview first, apply, roll back.", array('@version' => $version)) . '</p>');
   if (!$sass) {
     $form['nosass'] = bootstrap_native_update_notice('warning', t('No Sass compiler found, so this page only shows the current choices. Run <code>drush bootstrap-native-sass --install</code> to change them.'));

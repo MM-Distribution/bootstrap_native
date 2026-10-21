@@ -53,6 +53,52 @@ function bootstrap_native_update_themes_in_use() {
 }
 
 /**
+ * Whether the site has its own Bootstrap Native theme yet.
+ *
+ * @return string
+ *   '' when the default theme is a sub-theme of Bootstrap Native; 'base'
+ *   when the default theme is Bootstrap Native itself (sites from before it
+ *   was hidden); 'none' when no sub-theme is the default.
+ */
+function bootstrap_native_update_site_theme_state() {
+  $default = variable_get('theme_default', 'bartik');
+  if ($default == 'bootstrap_native') {
+    return 'base';
+  }
+  $themes = list_themes();
+  if (isset($themes[$default]) && !empty($themes[$default]->info['base theme']) && array_key_exists('bootstrap_native', drupal_find_base_themes($themes, $default))) {
+    return '';
+  }
+  return 'none';
+}
+
+/**
+ * The "create your site's theme" prompt, or an empty array.
+ */
+function bootstrap_native_update_site_theme_prompt() {
+  $state = bootstrap_native_update_site_theme_state();
+  if ($state === '' || !user_access('create bootstrap native sub-themes')) {
+    return array();
+  }
+  $text = $state == 'base'
+    ? t("<strong>Move to your own theme.</strong> This site uses Bootstrap Native directly, so there is no safe place for its own styles and templates (updates overwrite the theme's files). One click creates the site's theme with the same settings and switches to it; nothing changes on the pages.")
+    : t("<strong>Create your site's theme to start using Bootstrap Native.</strong> Bootstrap Native is a foundation: the site uses a theme built on it, where its own styles and templates go, safe from updates. It starts with Bootstrap Native's look and settings.");
+  $button = l($state == 'base' ? t('Move to your own theme') : t("Create your site's theme"), 'admin/appearance/bootstrap-native-subtheme', array('attributes' => array('class' => array('button'))));
+  return array(
+    '#markup' => '<div class="messages warning bnu-site-theme" role="status">' . $text . ' ' . $button . '</div>',
+  );
+}
+
+/**
+ * Implements hook_help().
+ */
+function bootstrap_native_update_help($path, $arg) {
+  if ($path == 'admin/appearance' && ($prompt = bootstrap_native_update_site_theme_prompt())) {
+    return $prompt['#markup'];
+  }
+}
+
+/**
  * Implements hook_permission().
  */
 function bootstrap_native_update_permission() {

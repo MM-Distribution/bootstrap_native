@@ -21,6 +21,17 @@ A Drupal 7 project in one folder (`sites/all/modules/bootstrap_native`):
 The module must stay enabled while the theme (or a sub-theme of it) is
 enabled; it marks itself required then (`hook_system_info_alter()`).
 
+**Bootstrap Native is hidden** (`hidden = TRUE`): a foundation, not a site
+theme. A site uses a sub-theme of it, made with the generator;
+`bootstrap_native_update_site_theme_state()` says whether it has one ('' =
+yes; 'base' = the default is Bootstrap Native itself, from before it was
+hidden; 'none'). Without one, Appearance (`hook_help`), the module's
+pages and the status report offer to create it, and
+`bootstrap_native_update_subtheme_enable()` makes it the default. Enabling
+it first copies the default theme's blocks; a move off Bootstrap Native
+disables the base theme. Theme settings are per theme in D7: the
+generator copies Bootstrap Native's into the new theme.
+
 Targets: Drupal 7 core, PHP 7.4 to 8.4 (no PHP 8-only syntax), browsers
 that run Bootstrap 6 (Chrome/Edge 130+, Firefox 132+, Safari 18+). Code
 should port to Backdrop CMS later: plain Drupal 7 APIs, no Composer.
@@ -159,7 +170,8 @@ Files:
 - `bootstrap_native_update_entry_files()`,
   `_effective_selection()`, `_release_parts()`, `_utility_groups()`
   (parts.inc): the parts model.
-- `bootstrap_native_update_subtheme_create($machine, $name, $parent)`
+- `bootstrap_native_update_subtheme_create($machine, $name, $parent)`,
+  `_subtheme_enable($machine, $default)`, `_subtheme_suggest($name)`
   (subtheme.inc).
 
 ## Hooks the module implements

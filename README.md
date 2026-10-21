@@ -6,11 +6,20 @@ A Drupal 7 base theme: Bootstrap 6 styling on Drupal's own markup.
 
 One folder, installed like a module: `sites/all/modules/bootstrap_native`
 (a `git pull` or a new download updates everything). Enable the module
-**Bootstrap Native** (`bootstrap_native_update`); the theme then appears
-under Appearance. The theme lives in `themes/bootstrap_native/` inside the
-folder, and the module tells Drupal about it (`hook_system_theme_info()`),
-so the module can't be disabled while the theme or a sub-theme of it is
-enabled.
+**Bootstrap Native** (`bootstrap_native_update`), then **create the site's
+theme**: Appearance, the Bootstrap updates page and the status report all
+offer it (*Create your site's theme*, pre-filled with the site's name, set
+as the default), or `drush bootstrap-native-subtheme mysite --default`.
+
+Bootstrap Native itself is a foundation, hidden on the Appearance page:
+the site's own styles and templates go in its sub-theme, where updates
+never reach them. A site that used Bootstrap Native directly is offered
+*Move to your own theme* (same settings, colors, logo and blocks; Bootstrap
+Native is disabled afterwards).
+
+The theme lives in `themes/bootstrap_native/` inside the folder, and the
+module tells Drupal about it (`hook_system_theme_info()`), so the module
+can't be disabled while a theme built on it is enabled.
 
     AGENTS.md                   notes for AI agents (CLAUDE.md imports it);
                                 new sub-themes get their own from starterkit/

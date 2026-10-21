@@ -23,8 +23,12 @@ FIX="$FILES/bootstrap-native-test"
 SUB="bnu_test_sub"
 B1="6.0.1-test.1~default"
 SHIPPED="$(cat "$DIR/themes/bootstrap_native/vendor/bootstrap/VERSION")"
+DEFAULT="$(D ev 'echo variable_get("theme_default", "bartik");')"
+BASE_STATUS="$(D ev '$t = list_themes(TRUE); echo $t["bootstrap_native"]->status;')"
 
 cleanup() {
+  D vset theme_default "$DEFAULT" >/dev/null 2>&1
+  [ "$BASE_STATUS" = 1 ] || D ev "theme_disable(array('bootstrap_native'));" >/dev/null 2>&1
   EV "bootstrap_native_update_activate(''); foreach (array_keys(bootstrap_native_update_builds()) as \$b) bootstrap_native_update_discard_build(\$b); foreach (array_keys(bootstrap_native_update_versions()) as \$v) bootstrap_native_update_discard_release(\$v); foreach (array('registry', 'fallback', 'needs_build', 'last_build', 'selection', 'previous', 'part_info') as \$k) variable_del('bootstrap_native_update_' . \$k); variable_set('bootstrap_native_update_releases', array());" >/dev/null
   D ev "theme_disable(array('$SUB')); variable_del('theme_${SUB}_settings'); db_delete('system')->condition('name', array('$SUB', 'bnu_ui_sub'))->execute(); variable_del('theme_bnu_ui_sub_settings');" >/dev/null 2>&1
   /bin/rm -rf "${DRUPAL_ROOT:?}/sites/all/themes/$SUB" "${DRUPAL_ROOT:?}/sites/all/themes/bnu_ui_sub" "${DRUPAL_ROOT:?}/${FIX:?}"
@@ -190,11 +194,35 @@ with sync_playwright() as p:
     b.close()
 ' "$BASE" 2>&1 | tail -1)"
 [ "$out" = "function errors: 0" ]; ok $? "in a browser the plugin runs and imports Bootstrap by name ($out)"
-D vset theme_default bootstrap_native >/dev/null 2>&1
+D vset theme_default "$DEFAULT" >/dev/null 2>&1
 sed -i '/^bootstrap_native\[/d' "$T/$SUB.info"
 D cc all >/dev/null 2>&1
 active="$(EV 'echo bootstrap_native_update_active();')"
 [ "$active" = "" ]; ok $? "without them, back to the theme's own files after a cache clear"
+
+echo "== The site's own theme"
+out="$(D ev '$t = list_themes(TRUE); echo (int) !empty($t["bootstrap_native"]->info["hidden"]);')"
+[ "$out" = 1 ]; ok $? "Bootstrap Native is hidden (a foundation, not a site theme)"
+# As an admin: the prompt is only for people who may create sub-themes.
+state() { D --user=1 ev "echo bootstrap_native_update_site_theme_state(), '|', strip_tags((string) bootstrap_native_update_help('admin/appearance', array()));" 2>&1; }
+D vset theme_default bootstrap_native >/dev/null 2>&1
+out="$(state)"; has "$out" "base|Move to your own theme"; ok $? "on Bootstrap Native itself: Appearance offers to move to the site's own theme"
+D vset theme_default bartik >/dev/null 2>&1
+out="$(state)"; has "$out" "none|Create your site's theme"; ok $? "no Bootstrap Native theme yet: Appearance offers to create one"
+status="$(D core-requirements --severity=1 2>&1)"; has "$status" "Site theme"; ok $? "and the status report says so"
+D vset theme_default "$DEFAULT" >/dev/null 2>&1
+out="$(state)"; [ "$out" = "|" ]; ok $? "with a sub-theme as the default: no prompt"
+# Moving off Bootstrap Native: the new theme gets its blocks and settings,
+# the base theme is disabled.
+D ev "theme_enable(array('bootstrap_native'));" >/dev/null 2>&1
+D vset theme_default bootstrap_native >/dev/null 2>&1
+blocks="$(D ev "echo db_query('SELECT COUNT(*) FROM {block} WHERE theme = :t AND status = 1', array(':t' => 'bootstrap_native'))->fetchField();")"
+D bootstrap-native-subtheme bnu_move_sub --name="Moved Site" --default >/dev/null 2>&1
+out="$(D ev "\$t = list_themes(TRUE); echo variable_get('theme_default'), '|', \$t['bootstrap_native']->status, '|', db_query('SELECT COUNT(*) FROM {block} WHERE theme = :t AND status = 1', array(':t' => 'bnu_move_sub'))->fetchField();")"
+[ "$out" = "bnu_move_sub|0|$blocks" ]; ok $? "moved: the new theme is the default, has the $blocks blocks, Bootstrap Native is disabled ($out)"
+D vset theme_default "$DEFAULT" >/dev/null 2>&1
+D ev "theme_disable(array('bnu_move_sub')); variable_del('theme_bnu_move_sub_settings'); db_delete('block')->condition('theme', 'bnu_move_sub')->execute(); db_delete('system')->condition('name', 'bnu_move_sub')->execute();" >/dev/null 2>&1
+/bin/rm -rf "${DRUPAL_ROOT:?}/sites/all/themes/bnu_move_sub"
 
 echo "== Pages (browser)"
 EV "bootstrap_native_update_activate(''); foreach (array_keys(bootstrap_native_update_builds()) as \$b) bootstrap_native_update_discard_build(\$b); foreach (array_keys(bootstrap_native_update_versions()) as \$v) bootstrap_native_update_discard_release(\$v); bootstrap_native_update_refresh_releases();" >/dev/null

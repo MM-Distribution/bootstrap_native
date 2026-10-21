@@ -4,6 +4,11 @@ core = 7.x
 version = 7.x-1.0-dev
 screenshot = screenshot.png
 
+; A foundation, not a site theme: sites use a sub-theme of it (their own
+; styles and templates go there, safe from updates). Hidden from the
+; Appearance page; the module offers to create the site's theme.
+hidden = TRUE
+
 ; Compiled from scss/ by build/build.sh (Bootstrap 6.0.0-alpha.1 in vendor/bootstrap).
 stylesheets[all][] = css/bootstrap_native.css
 

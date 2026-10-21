@@ -20,6 +20,7 @@ function bootstrap_native_update_admin_css() {
  */
 function bootstrap_native_update_overview_page() {
   $build = array('#attached' => bootstrap_native_update_admin_css());
+  $build['site_theme'] = bootstrap_native_update_site_theme_prompt();
   $active = bootstrap_native_update_active();
   $sass = bootstrap_native_update_sass();
   $available = bootstrap_native_update_available();

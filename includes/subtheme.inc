@@ -83,6 +83,39 @@ function bootstrap_native_update_subtheme_create($machine, $name, $parent = 'sit
 }
 
 /**
+ * Enables a sub-theme, and makes it the site's default if asked.
+ *
+ * Enabling first copies the current default theme's blocks to it (core's
+ * block module does that for a newly enabled theme). A site that used
+ * Bootstrap Native directly has it disabled afterwards (it is hidden and
+ * only a foundation), unless it is the administration theme.
+ */
+function bootstrap_native_update_subtheme_enable($machine, $default) {
+  system_rebuild_theme_data();
+  drupal_theme_rebuild();
+  theme_enable(array($machine));
+  if ($default) {
+    $was = variable_get('theme_default', 'bartik');
+    variable_set('theme_default', $machine);
+    if ($was == 'bootstrap_native' && variable_get('admin_theme', '') != 'bootstrap_native') {
+      theme_disable(array('bootstrap_native'));
+    }
+  }
+}
+
+/**
+ * A starting machine name from a human name (the site's name, say).
+ */
+function bootstrap_native_update_subtheme_suggest($name) {
+  $machine = preg_replace('/[^a-z0-9_]+/', '_', strtolower(bootstrap_native_update_subtheme_clean_name($name)));
+  $machine = trim(preg_replace('/_+/', '_', $machine), '_');
+  if (!preg_match('/^[a-z]/', $machine)) {
+    $machine = 'site_' . $machine;
+  }
+  return rtrim(substr($machine, 0, 32), '_');
+}
+
+/**
  * Writes a sub-theme's files into a new folder.
  *
  * @param string $machine

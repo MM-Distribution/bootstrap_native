@@ -44,7 +44,25 @@ function bootstrap_native_update_requirements($phase) {
     ));
   }
   $requirements['bootstrap_native_update'] = $row;
+  $state = bootstrap_native_update_site_theme_state();
+  if ($state !== '') {
+    $requirements['bootstrap_native_update_site_theme'] = array(
+      'title' => $t('Site theme (Bootstrap Native)'),
+      'value' => $state == 'base' ? $t('Bootstrap Native itself') : $t('None yet'),
+      'severity' => REQUIREMENT_WARNING,
+      'description' => $state == 'base'
+        ? $t('The site uses Bootstrap Native directly, so its own styles and templates have no safe place. <a href="@url">Move to your own theme</a> (same settings, nothing changes on the pages).', array('@url' => url('admin/appearance/bootstrap-native-subtheme')))
+        : $t('<a href="@url">Create the site\'s theme</a> to use Bootstrap Native: a sub-theme for its own styles and templates.', array('@url' => url('admin/appearance/bootstrap-native-subtheme'))),
+    );
+  }
   return $requirements;
+}
+
+/**
+ * Implements hook_enable().
+ */
+function bootstrap_native_update_enable() {
+  drupal_set_message(t("Bootstrap Native is ready. <a href=\"@url\">Create your site's theme</a> to start using it (or <code>drush bootstrap-native-subtheme</code>).", array('@url' => url('admin/appearance/bootstrap-native-subtheme'))));
 }
 
 /**

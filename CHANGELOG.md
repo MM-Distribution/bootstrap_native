@@ -45,3 +45,9 @@
   (size and fingerprint) and rebuild what doesn't match, re-downloading
   the release only if it's gone too. Nothing is touched when all is in
   order. "Measure again" link on the components page.
+- 2026-10-21: Bootstrap Native is hidden: a foundation, not a site theme.
+  Sites create their own theme (a sub-theme) from the prompt on Appearance,
+  the module's pages and the status report (pre-filled with the site's
+  name, made the default); a site on Bootstrap Native itself is offered
+  "Move to your own theme" (settings, blocks; the base theme is disabled).
+  The color settings preview uses the active build's stylesheet.

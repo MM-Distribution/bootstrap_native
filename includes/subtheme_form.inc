@@ -17,13 +17,22 @@ function bootstrap_native_update_subtheme_form($form, &$form_state) {
   drupal_set_title(t('Create a sub-theme'));
   $form['#attached']['css'][] = drupal_get_path('module', 'bootstrap_native_update') . '/css/bootstrap_native_update.css';
   $form['#attributes']['class'][] = 'bnu-subtheme';
-  $form['intro'] = array('#markup' => '<p class="bnu-intro">' . t("A sub-theme holds this site's own styles and templates. Bootstrap Native updates never touch it. It starts with Bootstrap Native's regions, colors and logo, so switching to it changes nothing until you edit it.") . '</p>');
+  // The site's first theme (or a move off Bootstrap Native itself): its
+  // name, enabled and the default.
+  $state = bootstrap_native_update_site_theme_state();
+  $first = $state !== '';
+  $intro = $state == 'base'
+    ? t("This site uses Bootstrap Native directly. Its own theme gets the same settings, colors, logo and blocks, and becomes the default; the pages look the same, and the site's styles and templates have a safe place.")
+    : t("A sub-theme holds this site's own styles and templates. Bootstrap Native updates never touch it. It starts with Bootstrap Native's regions, colors and logo, so switching to it changes nothing until you edit it.");
+  $form['intro'] = array('#markup' => '<p class="bnu-intro">' . $intro . '</p>');
+  $site_name = variable_get('site_name', '');
   $form['name'] = array(
     '#type' => 'textfield',
     '#title' => t('Name'),
     '#required' => TRUE,
     '#maxlength' => 64,
     '#size' => 40,
+    '#default_value' => $first ? bootstrap_native_update_subtheme_clean_name($site_name) : '',
   );
   $form['machine'] = array(
     '#type' => 'machine_name',
@@ -33,6 +42,7 @@ function bootstrap_native_update_subtheme_form($form, &$form_state) {
       'source' => array('name'),
     ),
     '#description' => t('Lowercase letters, digits and underscores. The folder and the PHP functions are named after it.'),
+    '#default_value' => $first && $site_name !== '' ? bootstrap_native_update_subtheme_suggest($site_name) : '',
   );
   $folders = array('sites/all/themes' => t('sites/all/themes (all sites)'));
   $site = conf_path() . '/themes';
@@ -54,8 +64,8 @@ function bootstrap_native_update_subtheme_form($form, &$form_state) {
   $form['default'] = array(
     '#type' => 'checkbox',
     '#title' => t('Make it the default theme'),
-    '#description' => t('Off by default: check it on the Appearance page first.'),
-    '#default_value' => 0,
+    '#description' => $first ? t("On for the site's first theme.") : t('Off by default: check it on the Appearance page first.'),
+    '#default_value' => $first ? 1 : 0,
   );
   $form['actions'] = array('#type' => 'actions');
   $form['actions']['create'] = array(
@@ -116,16 +126,15 @@ function bootstrap_native_update_subtheme_form_submit($form, &$form_state) {
     }
     return;
   }
-  system_rebuild_theme_data();
-  drupal_theme_rebuild();
   $did = t('Created @path.', array('@path' => $result['path']));
   if ($values['enable'] || $values['default']) {
-    theme_enable(array($values['machine']));
-    $did = t('Created @path and enabled it.', array('@path' => $result['path']));
+    bootstrap_native_update_subtheme_enable($values['machine'], (bool) $values['default']);
+    $did = $values['default']
+      ? t('Created @path; it is now the default theme.', array('@path' => $result['path']))
+      : t('Created @path and enabled it.', array('@path' => $result['path']));
   }
-  if ($values['default']) {
-    variable_set('theme_default', $values['machine']);
-    $did = t('Created @path; it is now the default theme.', array('@path' => $result['path']));
+  else {
+    system_rebuild_theme_data();
   }
   drupal_set_message('<strong>' . $did . '</strong> ' . t('Next: put this site\'s styles in <code>css/@machine.css</code>, and copy any template to change into <code>templates/</code>.', array('@machine' => $values['machine']))
     . (($values['enable'] || $values['default']) ? ' ' . l(t('Settings for @name', array('@name' => bootstrap_native_update_subtheme_clean_name($values['name']))), 'admin/appearance/settings/' . $values['machine']) : ''));
