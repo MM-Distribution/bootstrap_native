@@ -74,3 +74,12 @@
   as uploaded) are cleaned on upload by `includes/svg.inc`: SVG elements on
   a list, no event attributes or scripts, links only within the file, no
   styles that load anything; files with entities are refused.
+- 2026-10-21: Bootstrap parts per theme. One release site-wide; each theme
+  uses parts fixed in its .info (`bootstrap_native[parts_fixed] = TRUE`
+  with `parts[]` and `utilities[]`), its own choice (step 6 of its theme
+  settings; built and checked on Save, used once applied), or the
+  site-wide choice. Themes with the same parts share a build. The
+  components page lists the themes and what they use; release checks
+  build and check every theme, results per theme, one Apply for all, roll
+  back returns them together; previews work per theme. The menu-rename
+  check only counts fewer renamed menus than the build in use as a break.

@@ -101,6 +101,15 @@ modules) the site's stylesheet includes.
   *Reset to the theme's defaults* goes back to `scss/_bootstrap-parts.scss`.
 - **Download the built files** gives the active stylesheet and script as a
   .tar.gz.
+- **Per theme:** the Themes list at the top shows which parts each theme
+  uses. First match wins: parts fixed in its .info
+  (`bootstrap_native[parts_fixed] = TRUE`, for a theme built for its own
+  pages such as an admin theme), its own choice (step 6 of its settings:
+  saving builds and checks it, and its pages keep what they had until the
+  result is applied), or the site-wide choice. Themes with the same parts
+  share one stylesheet; all use the same release. A release check builds
+  every theme and shows the results per theme; Apply switches them all,
+  and roll back returns them together.
 - Scripts are one bundle (every plugin); the page lists them from the
   bundle's exports.
 

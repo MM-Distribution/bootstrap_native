@@ -128,9 +128,11 @@ function bootstrap_native_update_run_checks(array $old, array $new, array $theme
   $rows[] = array('check' => 'build', 'status' => 'passed', 'code' => 'build_ok', 'values' => array());
 
   // The .menu rename: too few means Bootstrap's dropdown would hide every
-  // Drupal menu, or its script would miss the renamed menus.
+  // Drupal menu, or its script would miss the renamed menus. A build that
+  // leaves the dropdown out (a theme with fixed parts) has fewer to begin
+  // with: only fewer than now counts.
   $menu = array('css' => $new['css_menus'], 'js' => $new['js_menus']);
-  if ($new['css_menus'] < BOOTSTRAP_NATIVE_UPDATE_MIN_CSS_MENUS || $new['js_menus'] < BOOTSTRAP_NATIVE_UPDATE_MIN_JS_MENUS) {
+  if (($new['css_menus'] < BOOTSTRAP_NATIVE_UPDATE_MIN_CSS_MENUS && $new['css_menus'] < $old['css_menus']) || ($new['js_menus'] < BOOTSTRAP_NATIVE_UPDATE_MIN_JS_MENUS && $new['js_menus'] < $old['js_menus'])) {
     $rows[] = array('check' => 'menu', 'status' => 'breaks', 'code' => 'menu_rename', 'values' => $menu + array('old_css' => $old['css_menus'], 'old_js' => $old['js_menus']));
   }
   else {

@@ -31,9 +31,9 @@ cleanup() {
   [ -n "${SETTINGS_SAVED:-}" ] && D ev "variable_set('theme_${DEFAULT}_settings', variable_get('bnu_test_settings')); variable_del('bnu_test_settings');" >/dev/null 2>&1
   D vset theme_default "$DEFAULT" >/dev/null 2>&1
   [ "$BASE_STATUS" = 1 ] || D ev "theme_disable(array('bootstrap_native'));" >/dev/null 2>&1
-  EV "bootstrap_native_update_activate(''); foreach (array_keys(bootstrap_native_update_builds()) as \$b) bootstrap_native_update_discard_build(\$b); foreach (array_keys(bootstrap_native_update_versions()) as \$v) bootstrap_native_update_discard_release(\$v); foreach (array('registry', 'fallback', 'needs_build', 'last_build', 'selection', 'previous', 'part_info') as \$k) variable_del('bootstrap_native_update_' . \$k); variable_set('bootstrap_native_update_releases', array());" >/dev/null
-  D ev "theme_disable(array('$SUB')); variable_del('theme_${SUB}_settings'); db_delete('system')->condition('name', array('$SUB', 'bnu_ui_sub'))->execute(); variable_del('theme_bnu_ui_sub_settings');" >/dev/null 2>&1
-  /bin/rm -rf "${DRUPAL_ROOT:?}/sites/all/themes/$SUB" "${DRUPAL_ROOT:?}/sites/all/themes/bnu_ui_sub" "${DRUPAL_ROOT:?}/${FIX:?}"
+  EV "bootstrap_native_update_activate(''); foreach (array_keys(bootstrap_native_update_builds()) as \$b) bootstrap_native_update_discard_build(\$b); foreach (array_keys(bootstrap_native_update_versions()) as \$v) bootstrap_native_update_discard_release(\$v); foreach (array('registry', 'fallback', 'needs_build', 'last_build', 'selection', 'previous', 'part_info', 'theme_builds', 'previous_theme_builds') as \$k) variable_del('bootstrap_native_update_' . \$k); variable_set('bootstrap_native_update_releases', array());" >/dev/null
+  D ev "theme_disable(array('$SUB', 'bnu_fixed_sub')); variable_del('theme_${SUB}_settings'); db_delete('system')->condition('name', array('$SUB', 'bnu_ui_sub', 'bnu_fixed_sub'))->execute(); variable_del('theme_bnu_ui_sub_settings');" >/dev/null 2>&1
+  /bin/rm -rf "${DRUPAL_ROOT:?}/sites/all/themes/$SUB" "${DRUPAL_ROOT:?}/sites/all/themes/bnu_ui_sub" "${DRUPAL_ROOT:?}/sites/all/themes/bnu_fixed_sub" "${DRUPAL_ROOT:?}/${FIX:?}"
   /bin/rm -f "${DRUPAL_ROOT:?}/${FILES:?}"/bnu-test-logo*.svg
   sed -i '/^\/\/ bnu-test$/d' "$DIR/themes/bootstrap_native/scss/_layout.scss"
   D cc all >/dev/null 2>&1
@@ -232,6 +232,71 @@ out="$(D ev "\$t = list_themes(TRUE); echo variable_get('theme_default'), '|', \
 D vset theme_default "$DEFAULT" >/dev/null 2>&1
 D ev "theme_disable(array('bnu_move_sub')); variable_del('theme_bnu_move_sub_settings'); db_delete('block')->condition('theme', 'bnu_move_sub')->execute(); db_delete('system')->condition('name', 'bnu_move_sub')->execute();" >/dev/null 2>&1
 /bin/rm -rf "${DRUPAL_ROOT:?}/sites/all/themes/bnu_move_sub"
+
+echo "== Parts per theme"
+FX="bnu_fixed_sub"
+F="$DRUPAL_ROOT/sites/all/themes/$FX"
+mkdir -p "$F"
+printf 'name = Bnu Fixed Sub\ncore = 7.x\nbase theme = bootstrap_native\nbootstrap_native[parts_fixed] = TRUE\nbootstrap_native[parts][] = alert\nbootstrap_native[parts][] = buttons\nbootstrap_native[parts][] = card\nbootstrap_native[utilities][] = display\n' > "$F/$FX.info"
+D ev "system_rebuild_theme_data(); theme_enable(array('$FX'));" >/dev/null 2>&1
+fixed="$(EV "\$m = bootstrap_native_update_theme_builds(); echo isset(\$m['$FX']) ? \$m['$FX'] : 'none';")"
+case "$fixed" in "$SHIPPED~"????????) true ;; *) false ;; esac; ok $? "a theme with fixed parts gets its own build when it is enabled ($fixed)"
+out="$(EV "\$b = bootstrap_native_update_builds(); \$e = \$b['$fixed']['effective']; echo bootstrap_native_update_parts_mode('$FX'), '|', in_array('card', \$e['parts']) ? 'card' : '-', '|', in_array('accordion', \$e['parts']) ? 'accordion' : '-', '|', implode(',', \$e['utilities']);")"
+[ "$out" = "fixed|card|-|display" ]; ok $? "its build has exactly its parts, plus the required ones ($out)"
+out="$(EV "echo bootstrap_native_update_build_for_theme('$FX'), '|', bootstrap_native_update_build_for_theme('$SUB'), '|', bootstrap_native_update_active();")"
+[ "$out" = "$fixed||" ]; ok $? "its pages use it; other themes keep the site-wide build ($out)"
+out="$(D ev "\$GLOBALS['theme_key'] = '$FX'; \$f = bootstrap_native_update_files(); echo \$f['build'];" 2>&1)"
+[ "$out" = "$fixed" ]; ok $? "a page in that theme gets its stylesheet"
+out="$(EV "\$p = bootstrap_native_update_plan_build(bootstrap_native_update_active_version()); echo \$p['build'];")"
+[ "$out" = "" ]; ok $? "its parts don't change the site-wide build ($out)"
+# Its own choice: the theme's parts without the accordion. Saved but not
+# applied: its pages keep the site-wide build.
+EV "\$p = bootstrap_native_update_plan_build(bootstrap_native_update_active_version()); \$sel = \$p['effective']; \$sel['parts'] = array_values(array_diff(\$sel['parts'], array('accordion'))); \$s = variable_get('theme_${SUB}_settings', array()); \$s['bootstrap_native_parts'] = \$sel; variable_set('theme_${SUB}_settings', \$s);" >/dev/null
+out="$(EV "echo bootstrap_native_update_parts_mode('$SUB'), '|', bootstrap_native_update_build_for_theme('$SUB');")"
+[ "$out" = "own|" ]; ok $? "its own choice, saved: still the site-wide build until applied ($out)"
+D cc all >/dev/null 2>&1
+out="$(EV "echo bootstrap_native_update_build_for_theme('$SUB');")"
+[ "$out" = "" ]; ok $? "a cache clear doesn't apply it either"
+own="$(EV "\$m = bootstrap_native_update_make_build(bootstrap_native_update_active_version(), FALSE, '$SUB'); bootstrap_native_update_apply_theme_build('$SUB', \$m['build']); echo \$m['build'];")"
+out="$(EV "\$b = bootstrap_native_update_builds(); echo bootstrap_native_update_build_for_theme('$SUB'), '|', in_array('accordion', \$b['$own']['effective']['parts']) ? 'accordion' : '-';")"
+[ "$out" = "$own|-" ]; ok $? "applied: its pages use its own build, without the accordion ($out)"
+# A release check builds every theme; the results are per theme.
+out="$(check 6.0.1-test.1)"
+has "$out" "Theme Bnu Fixed Sub (fixed parts): passed" && has "$out" "Theme Test Sub Theme (own parts): passed" && has "$out" "All themes: passed"; r=$?
+ok $r "a release check builds and checks each theme with its own parts"
+[ $r = 0 ] || echo "$out" | /usr/bin/grep -E "Verdict|Theme |All themes|refused|error" | sed 's/^/      /'
+site="$(EV "echo variable_get('bootstrap_native_update_last_build');")"
+out="$(LOGIN="$(D uli --name="${TEST_USER:-claude}" --no-browser 2>/dev/null)" PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH:-/opt/playwright/browsers}" "${PYTHON:-/opt/playwright/bin/python}" -c '
+import os, sys
+from playwright.sync_api import sync_playwright
+with sync_playwright() as p:
+    b = p.chromium.launch(); pg = b.new_page(viewport={"width": 1280, "height": 900})
+    pg.goto(os.environ["LOGIN"]); pg.goto(sys.argv[1] + "/admin/appearance/bootstrap-updates/result/" + sys.argv[2])
+    sections = pg.locator(".bnu-theme-result").count()
+    chips = pg.locator(".bnu-theme-chips a").count()
+    button = pg.locator("input[value=\"Apply update (all themes)\"]").count()
+    pg.screenshot(path=sys.argv[3] + "/14-results-per-theme.png", full_page=True)
+    pg.set_viewport_size({"width": 390, "height": 844})
+    width = pg.evaluate("document.documentElement.scrollWidth")
+    print(sections, chips, button, width <= 390)
+    b.close()
+' "$BASE" "$site" "${OUT:-/tmp}" 2>&1 | tail -1)"
+[ "$out" = "3 3 1 True" ]; ok $? "the results page has a section per theme, links to each, one Apply for all, fits a phone ($out)"
+EV "bootstrap_native_update_activate('$site');" >/dev/null
+out="$(EV "\$m = bootstrap_native_update_theme_builds(); echo bootstrap_native_update_active_version(), '|', bootstrap_native_update_build_version(\$m['$FX']), '|', bootstrap_native_update_build_version(\$m['$SUB']);")"
+[ "$out" = "6.0.1-test.1|6.0.1-test.1|6.0.1-test.1" ]; ok $? "applying it switches every theme to the new release ($out)"
+EV "bootstrap_native_update_activate(variable_get('bootstrap_native_update_previous'));" >/dev/null
+out="$(EV "\$m = bootstrap_native_update_theme_builds(); echo bootstrap_native_update_active(), '|', \$m['$FX'], '|', \$m['$SUB'];")"
+[ "$out" = "|$fixed|$own" ]; ok $? "rolling back returns every theme together ($out)"
+out="$(EV "bootstrap_native_update_discard_build('$own'); \$b = bootstrap_native_update_builds(); echo isset(\$b['$own']) ? 'kept' : 'gone';")"
+[ "$out" = "kept" ]; ok $? "a build a theme uses can't be discarded"
+# Back to the site-wide choice; disabling the fixed theme drops its build.
+EV "\$s = variable_get('theme_${SUB}_settings', array()); unset(\$s['bootstrap_native_parts']); variable_set('theme_${SUB}_settings', \$s); bootstrap_native_update_rebuild_theme_builds();" >/dev/null
+D ev "theme_disable(array('$FX'));" >/dev/null 2>&1
+out="$(EV "echo count(bootstrap_native_update_theme_builds()), '|', bootstrap_native_update_build_for_theme('$SUB');")"
+[ "$out" = "0|" ]; ok $? "back to the site-wide choice, and the fixed theme disabled: no theme builds left ($out)"
+D ev "db_delete('system')->condition('name', '$FX')->execute(); variable_del('theme_${FX}_settings');" >/dev/null 2>&1
+/bin/rm -rf "${F:?}"
 
 echo "== Pages (browser)"
 EV "bootstrap_native_update_activate(''); foreach (array_keys(bootstrap_native_update_builds()) as \$b) bootstrap_native_update_discard_build(\$b); foreach (array_keys(bootstrap_native_update_versions()) as \$v) bootstrap_native_update_discard_release(\$v); bootstrap_native_update_refresh_releases();" >/dev/null

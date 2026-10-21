@@ -22,7 +22,11 @@
  * State (variables, bootstrap_native_update_*): active and previous (build
  * names), selection (the site's parts; NULL = the theme's), builds and
  * versions (records), releases and checked (the registry, last fetched).
+ * Themes with their own or fixed parts have builds of their own: see
+ * includes/themes.inc.
  */
+
+require_once dirname(__FILE__) . '/themes.inc';
 
 /**
  * Inactive builds and releases are removed this long after they stop being
@@ -78,7 +82,10 @@ function bootstrap_native_update_versions() {
  * Records of builds, keyed by build name.
  *
  * Each: version, key, input (the selection asked for; NULL = the theme's),
- * effective (what was built), sass (extra modules), created, uid, meta
+ * theme (the theme with own or fixed parts it was made for; NULL = the
+ * site-wide choice), theme_builds (a site-wide build of a release check:
+ * the builds made for those themes with it), effective (what was built),
+ * sass (extra modules), created, uid, meta
  * (properties, css_menus, js_menus, undefined, size, seconds, theme_hash,
  * stamp; NULL when the build failed), error, check, applied,
  * inactive_since.
@@ -264,13 +271,26 @@ function bootstrap_native_update_theme_objects() {
  *   bootstrap_native[parts][] = carousel
  *   bootstrap_native[sass][] = scss/_extras.scss
  *
+ * @param array|null $names
+ *   The themes whose builds these are for (each with its base themes); NULL
+ *   for every enabled Bootstrap Native theme.
+ *
  * @return array
  *   Keys: needed (part => theme names), sass (absolute file => theme name).
  */
-function bootstrap_native_update_theme_additions() {
+function bootstrap_native_update_theme_additions($names = NULL) {
   $additions = array('needed' => array(), 'sass' => array());
-  foreach (bootstrap_native_update_theme_objects() as $name => $theme) {
-    if ($name == 'bootstrap_native' || empty($theme->info['bootstrap_native'])) {
+  $list = list_themes();
+  if ($names === NULL) {
+    $names = array_keys(bootstrap_native_update_themes_in_use());
+  }
+  $chain = array();
+  foreach ($names as $name) {
+    $chain = array_merge($chain, bootstrap_native_update_theme_chain($name));
+  }
+  foreach (array_unique($chain) as $name) {
+    $theme = $list[$name];
+    if (empty($theme->info['bootstrap_native'])) {
       continue;
     }
     $own = $theme->info['bootstrap_native'];
@@ -292,16 +312,30 @@ function bootstrap_native_update_theme_additions() {
 /**
  * Everything a build of a release needs to know about its parts.
  *
+ * @param string $version
+ *   The release.
+ * @param string|null $theme_name
+ *   A theme with own or fixed parts (its build); NULL for the site-wide
+ *   build (the themes that use the site-wide choice).
+ *
  * @return array
  *   Keys: parts, utility_groups, default, required, needed, exclude (see
  *   bootstrap_native_update_effective_selection()), needed_by, sass.
  */
-function bootstrap_native_update_parts_context($version) {
+function bootstrap_native_update_parts_context($version, $theme_name = NULL) {
   module_load_include('inc', 'bootstrap_native_update', 'includes/parts');
   $theme = bootstrap_native_update_theme_dir();
   $scss = bootstrap_native_update_release_dir($version) . '/bootstrap/scss';
   $info = drupal_parse_info_file($theme . '/bootstrap_native.info');
-  $additions = bootstrap_native_update_theme_additions();
+  $additions = bootstrap_native_update_theme_additions($theme_name === NULL ? bootstrap_native_update_site_themes() : array($theme_name));
+  // A folder listed (buttons) stands for its parts.
+  $needed_by = array();
+  foreach ($additions['needed'] as $part => $themes) {
+    foreach (bootstrap_native_update_expand_part($part, $scss) as $one) {
+      $needed_by[$one] = isset($needed_by[$one]) ? array_unique(array_merge($needed_by[$one], $themes)) : $themes;
+    }
+  }
+  $additions['needed'] = $needed_by;
   return array(
     'parts' => bootstrap_native_update_release_parts($scss),
     'utility_groups' => bootstrap_native_update_utility_groups($scss),
@@ -320,23 +354,34 @@ function bootstrap_native_update_parts_context($version) {
  * @param string $version
  *   The release.
  * @param array|null|false $selection
- *   The parts asked for (NULL: the theme's; FALSE: the site's selection).
+ *   The parts asked for (NULL: the theme's; FALSE: what applies: the
+ *   site's selection, or the theme's own or fixed parts).
+ * @param string|null $theme_name
+ *   A theme: its build (the site-wide one if it uses the site-wide choice).
  *
  * @return array
  *   Keys: build (name; '' when it is the theme's own files), effective,
- *   sass, input.
+ *   sass, input, theme (NULL for the site-wide build).
  */
-function bootstrap_native_update_plan_build($version, $selection = FALSE) {
-  if ($selection === FALSE) {
-    $selection = variable_get('bootstrap_native_update_selection', NULL);
+function bootstrap_native_update_plan_build($version, $selection = FALSE, $theme_name = NULL) {
+  $mode = $theme_name === NULL ? 'site' : bootstrap_native_update_parts_mode($theme_name);
+  if ($mode == 'site') {
+    $theme_name = NULL;
   }
-  $context = bootstrap_native_update_parts_context($version);
+  if ($mode == 'fixed') {
+    // The .info decides, whatever was asked.
+    $selection = bootstrap_native_update_fixed_selection($theme_name);
+  }
+  elseif ($selection === FALSE) {
+    $selection = $mode == 'own' ? bootstrap_native_update_own_selection($theme_name) : variable_get('bootstrap_native_update_selection', NULL);
+  }
+  $context = bootstrap_native_update_parts_context($version, $theme_name);
   $effective = bootstrap_native_update_effective_selection($selection, $context);
   $default = bootstrap_native_update_effective_selection(NULL, array('needed' => array()) + $context);
   $sass = array_keys($context['sass']);
   $key = bootstrap_native_update_selection_key($effective, $default, $sass);
   $build = $key == 'default' && $version === bootstrap_native_update_shipped_version() ? '' : $version . '~' . $key;
-  return array('build' => $build, 'effective' => $effective, 'sass' => $sass, 'input' => $selection);
+  return array('build' => $build, 'effective' => $effective, 'sass' => $sass, 'input' => $selection, 'theme' => $theme_name);
 }
 
 /**
@@ -346,10 +391,10 @@ function bootstrap_native_update_plan_build($version, $selection = FALSE) {
  *   Keys: build (name), error ('' when built; else the problem, recorded on
  *   the build so the checks report it).
  */
-function bootstrap_native_update_make_build($version, $selection = FALSE) {
+function bootstrap_native_update_make_build($version, $selection = FALSE, $theme_name = NULL) {
   module_load_include('inc', 'bootstrap_native_update', 'includes/build');
   module_load_include('inc', 'bootstrap_native_update', 'includes/parts');
-  $plan = bootstrap_native_update_plan_build($version, $selection);
+  $plan = bootstrap_native_update_plan_build($version, $selection, $theme_name);
   if ($plan['build'] === '') {
     return array('build' => '', 'error' => '');
   }
@@ -362,7 +407,7 @@ function bootstrap_native_update_make_build($version, $selection = FALSE) {
   }
 
   // The generated entry, in a folder of its own (first on the load path).
-  $context = bootstrap_native_update_parts_context($version);
+  $context = bootstrap_native_update_parts_context($version, $plan['theme']);
   $tmp = file_directory_temp() . '/bootstrap-native-build-' . getmypid() . '-' . mt_rand();
   mkdir($tmp, 0700);
   $load_paths = array($tmp, bootstrap_native_update_release_dir($version), bootstrap_native_update_theme_dir() . '/scss');
@@ -390,13 +435,21 @@ function bootstrap_native_update_make_build($version, $selection = FALSE) {
     'sass' => $plan['sass'],
     'created' => REQUEST_TIME,
     'uid' => $GLOBALS['user']->uid,
-    'inactive_since' => $plan['build'] === bootstrap_native_update_active() ? NULL : REQUEST_TIME,
+    'theme' => $plan['theme'],
+    'inactive_since' => isset(bootstrap_native_update_builds_in_use()[$plan['build']]) ? NULL : REQUEST_TIME,
     'check' => NULL,
     'error' => $build['error'],
     'meta' => NULL,
   );
   if (isset($builds[$plan['build']]['applied'])) {
     $record['applied'] = $builds[$plan['build']]['applied'];
+  }
+  // The same parts for another theme (or the site-wide choice): one build,
+  // and it keeps what it was first made for.
+  $first = isset($builds[$plan['build']]) ? $builds[$plan['build']] + array('theme' => NULL) : NULL;
+  if ($first && !empty($first['meta']) && $first['theme'] !== $plan['theme']) {
+    $record['input'] = $builds[$plan['build']]['input'];
+    $record['theme'] = $builds[$plan['build']]['theme'];
   }
   if (!$build['error']) {
     $dir = bootstrap_native_update_build_uri($plan['build']);
@@ -457,13 +510,21 @@ function bootstrap_native_update_load_build($build) {
 }
 
 /**
- * Checks a build against the one the site uses, and records the result.
+ * Checks a build against the one in use, and records the result.
+ *
+ * @param string $build
+ *   The build.
+ * @param string|null $against
+ *   The build to compare with (NULL: the site-wide one in use).
+ * @param array|null $themes
+ *   The theme folders whose templates count (NULL: Bootstrap Native and
+ *   the themes using the site-wide choice).
  */
-function bootstrap_native_update_check_build($build) {
+function bootstrap_native_update_check_build($build, $against = NULL, $themes = NULL) {
   module_load_include('inc', 'bootstrap_native_update', 'includes/build');
   module_load_include('inc', 'bootstrap_native_update', 'includes/checks');
-  $active = bootstrap_native_update_active();
-  $result = bootstrap_native_update_run_checks(bootstrap_native_update_load_build($active), bootstrap_native_update_load_build($build), bootstrap_native_update_check_themes(), bootstrap_native_update_color_properties());
+  $active = $against === NULL ? bootstrap_native_update_active() : $against;
+  $result = bootstrap_native_update_run_checks(bootstrap_native_update_load_build($active), bootstrap_native_update_load_build($build), $themes === NULL ? bootstrap_native_update_check_themes_for() : $themes, bootstrap_native_update_color_properties());
   if ($result['verdict'] != 'failed') {
     $builds = bootstrap_native_update_builds();
     foreach (bootstrap_native_update_missing_color_names($builds[$build]['version']) as $row) {
@@ -605,6 +666,8 @@ function _bootstrap_native_update_check_step($step, $version) {
       if (!$shipped) {
         bootstrap_native_update_save_version($version, array('build' => $made['build']));
       }
+      // Themes with own or fixed parts: a build each, with this release.
+      bootstrap_native_update_save_build_record($made['build'], array('theme_builds' => bootstrap_native_update_make_theme_builds($version)));
       variable_set('bootstrap_native_update_last_build', $made['build']);
       return '';
 
@@ -615,6 +678,7 @@ function _bootstrap_native_update_check_step($step, $version) {
         return t('Nothing was built.');
       }
       bootstrap_native_update_check_build($build);
+      bootstrap_native_update_check_theme_builds($build);
       if (!$shipped) {
         bootstrap_native_update_save_version($version, array('error' => ''));
       }
@@ -708,13 +772,52 @@ function bootstrap_native_update_theme_hash() {
 
 /**
  * Switches the site to a build ('' = the theme's own files).
+ *
+ * Themes with own or fixed parts switch too: to the builds made with it (a
+ * release check), else to what they had when it was last in use (a roll
+ * back), else they keep theirs if it is of the same release, else to a
+ * build made now.
+ *
+ * @param string $build
+ *   The site-wide build.
+ * @param array|null $theme_builds
+ *   The themes' builds to use (NULL: as above).
  */
-function bootstrap_native_update_activate($build) {
+function bootstrap_native_update_activate($build, $theme_builds = NULL) {
   $old = bootstrap_native_update_active();
   $builds = bootstrap_native_update_builds();
   $shipped = bootstrap_native_update_shipped_version();
-  if ($old !== '' && $old !== $build) {
-    bootstrap_native_update_save_build_record($old, array('inactive_since' => REQUEST_TIME));
+  $old_map = bootstrap_native_update_theme_builds();
+  $version = bootstrap_native_update_build_version($build);
+  if ($theme_builds === NULL) {
+    if ($build !== '' && !empty($builds[$build]['theme_builds'])) {
+      $theme_builds = $builds[$build]['theme_builds'];
+    }
+    elseif ($build === variable_get('bootstrap_native_update_previous', NULL)) {
+      $theme_builds = variable_get('bootstrap_native_update_previous_theme_builds', array());
+    }
+    else {
+      // Their builds stay when they are of the same release (Build and
+      // check on the components page only touches the site-wide one).
+      $theme_builds = $old_map;
+    }
+  }
+  // Only builds of this release, for themes that still have own or fixed
+  // parts; the others are made now (a theme with its own choice that was
+  // never applied keeps the site-wide build).
+  $separate = bootstrap_native_update_separate_themes();
+  foreach ($theme_builds as $name => $theme_build) {
+    if (!isset($separate[$name]) || bootstrap_native_update_build_version($theme_build) !== $version || ($theme_build !== '' && empty($builds[$theme_build]['meta']))) {
+      unset($theme_builds[$name]);
+    }
+  }
+  foreach ($separate as $name => $mode) {
+    if (!isset($theme_builds[$name]) && ($mode == 'fixed' || isset($old_map[$name]))) {
+      $made = bootstrap_native_update_make_build($version, $mode == 'own' && isset($old_map[$name]) && isset($builds[$old_map[$name]]['input']) ? $builds[$old_map[$name]]['input'] : FALSE, $name);
+      if (!$made['error']) {
+        $theme_builds[$name] = $made['build'];
+      }
+    }
   }
   if ($build !== '') {
     bootstrap_native_update_save_build_record($build, array('inactive_since' => NULL));
@@ -726,15 +829,21 @@ function bootstrap_native_update_activate($build) {
   else {
     variable_set('bootstrap_native_update_selection', NULL);
   }
-  // A release none of whose builds is in use starts its 30 days.
-  $old_version = bootstrap_native_update_build_version($old);
-  if ($old !== '' && $old_version !== bootstrap_native_update_build_version($build) && $old_version !== $shipped) {
-    bootstrap_native_update_save_version($old_version, array('inactive_since' => REQUEST_TIME));
+  foreach (array_filter($theme_builds, 'strlen') as $theme_build) {
+    bootstrap_native_update_save_build_record($theme_build, array('inactive_since' => NULL));
   }
-  if ($old !== $build) {
+  if ($old !== $build || $old_map != $theme_builds) {
     variable_set('bootstrap_native_update_previous', $old);
+    variable_set('bootstrap_native_update_previous_theme_builds', $old_map);
   }
   variable_set('bootstrap_native_update_active', $build);
+  variable_set('bootstrap_native_update_theme_builds', $theme_builds);
+  bootstrap_native_update_mark_inactive(array_merge(array($old), array_values($old_map)));
+  // A release none of whose builds is in use starts its 30 days.
+  $old_version = bootstrap_native_update_build_version($old);
+  if ($old !== '' && $old_version !== $version && $old_version !== $shipped) {
+    bootstrap_native_update_save_version($old_version, array('inactive_since' => REQUEST_TIME));
+  }
   variable_del('bootstrap_native_update_fallback');
   bootstrap_native_update_flush_assets();
   watchdog('bootstrap_native', 'Bootstrap build @new is now active (was @old).', array(
@@ -754,10 +863,10 @@ function bootstrap_native_update_flush_assets() {
 }
 
 /**
- * Removes a build (never the active one).
+ * Removes a build (never one in use).
  */
 function bootstrap_native_update_discard_build($build) {
-  if (!bootstrap_native_update_valid_build($build) || $build === bootstrap_native_update_active()) {
+  if (!bootstrap_native_update_valid_build($build) || isset(bootstrap_native_update_builds_in_use()[$build])) {
     return;
   }
   file_unmanaged_delete_recursive(bootstrap_native_update_build_uri($build));
@@ -798,10 +907,10 @@ function bootstrap_native_update_discard_release($version, $unapplied_only = FAL
  * Removes builds and releases inactive for longer than the keep period.
  */
 function bootstrap_native_update_cleanup() {
-  $active = bootstrap_native_update_active();
+  $in_use = bootstrap_native_update_builds_in_use();
   $limit = REQUEST_TIME - BOOTSTRAP_NATIVE_UPDATE_KEEP;
   foreach (bootstrap_native_update_builds() as $build => $record) {
-    if ($build !== $active && !empty($record['inactive_since']) && $record['inactive_since'] < $limit) {
+    if (!isset($in_use[$build]) && !empty($record['inactive_since']) && $record['inactive_since'] < $limit) {
       bootstrap_native_update_discard_build($build);
     }
   }
@@ -879,7 +988,7 @@ function bootstrap_native_update_restore_build($build) {
   if (!bootstrap_native_update_release_present($record['version']) && ($error = bootstrap_native_update_fetch_release($record['version']))) {
     return t('Bootstrap @version could not be downloaded again: @error', array('@version' => $record['version'], '@error' => $error));
   }
-  $made = bootstrap_native_update_make_build($record['version'], $record['input']);
+  $made = bootstrap_native_update_make_build($record['version'], $record['input'], isset($record['theme']) ? $record['theme'] : NULL);
   if ($made['error']) {
     return $made['error'];
   }
@@ -907,7 +1016,8 @@ function bootstrap_native_update_repair() {
   }
   $active = bootstrap_native_update_active();
   $previous = variable_get('bootstrap_native_update_previous', '');
-  foreach (array_unique(array_filter(array($active, $previous))) as $build) {
+  $theme_builds = array_merge(array_values(bootstrap_native_update_theme_builds()), array_values(variable_get('bootstrap_native_update_previous_theme_builds', array())));
+  foreach (array_unique(array_filter(array_merge(array($active, $previous), $theme_builds), 'strlen')) as $build) {
     if (bootstrap_native_update_build_intact($build)) {
       continue;
     }
@@ -940,22 +1050,29 @@ function bootstrap_native_update_rebuild_if_stale() {
   $plan = bootstrap_native_update_plan_build($version);
   $builds = bootstrap_native_update_builds();
   $stale = $active !== '' && $builds[$active]['meta']['theme_hash'] !== bootstrap_native_update_theme_hash();
+  // Themes with own or fixed parts keep theirs (activate() below keeps the
+  // map; bootstrap_native_update_rebuild_theme_builds() renews them).
+  $map = bootstrap_native_update_theme_builds();
   if ($plan['build'] === $active && !$stale) {
     variable_del('bootstrap_native_update_needs_build');
+    bootstrap_native_update_rebuild_theme_builds();
     return;
   }
   if ($plan['build'] === '') {
-    bootstrap_native_update_activate('');
+    bootstrap_native_update_activate('', $map);
+    bootstrap_native_update_rebuild_theme_builds();
     return;
   }
   $made = bootstrap_native_update_make_build($version);
   if (!$made['error']) {
-    bootstrap_native_update_activate($made['build']);
+    bootstrap_native_update_activate($made['build'], $map);
     variable_del('bootstrap_native_update_needs_build');
+    bootstrap_native_update_rebuild_theme_builds();
     return;
   }
   if ($active !== '') {
-    bootstrap_native_update_activate('');
+    bootstrap_native_update_activate('', $map);
+    bootstrap_native_update_rebuild_theme_builds();
     variable_set('bootstrap_native_update_fallback', array('version' => $active, 'error' => $made['error'], 'time' => REQUEST_TIME));
     watchdog('bootstrap_native', "Bootstrap Native changed and the Bootstrap build @build could not be rebuilt for it, so the site uses the theme's own files again: @error", array('@build' => $active, '@error' => $made['error']), WATCHDOG_WARNING);
   }

@@ -48,16 +48,14 @@ function bootstrap_native_update_components_form($form, &$form_state) {
   $chosen = array_flip(array_merge($current['effective']['parts'], array_map(function ($g) {
     return 'utilities:' . $g;
   }, $current['effective']['utilities'])));
-  $required = array_flip($context['required']);
   $used = bootstrap_native_update_parts_in_templates($version, $context);
-  $sizes = $info ? $info['sizes'] : array();
-  $docs = $info ? $info['docs'] : array();
 
   $form['#attached'] = bootstrap_native_update_admin_css();
   $form['#attached']['js'][] = drupal_get_path('module', 'bootstrap_native_update') . '/js/components.js';
   $form['#attributes']['class'][] = 'bnu-components';
   $form['site_theme'] = bootstrap_native_update_site_theme_prompt();
   $form['intro'] = array('#markup' => '<p class="bnu-intro">' . t("What goes into this site's Bootstrap build. The list comes from the active release (@version), so a new release brings its own parts. Changes are built and checked like an update: preview first, apply, roll back.", array('@version' => $version)) . '</p>');
+  $form['themes'] = bootstrap_native_update_components_themes($version, $current['effective']);
   if (!$sass) {
     $form['nosass'] = bootstrap_native_update_notice('warning', t('No Sass compiler found, so this page only shows the current choices. Run <code>drush bootstrap-native-sass --install</code> to change them.'));
   }
@@ -77,50 +75,24 @@ function bootstrap_native_update_components_form($form, &$form_state) {
     '#theme' => 'bootstrap_native_update_components_table',
     '#tree' => TRUE,
     '#groups' => $groups,
+    '#bnu_title' => t('Site-wide choice'),
+    '#bnu_intro' => t('Every theme in the list above that uses the site-wide choice gets these parts.'),
   );
-  $rows = array();
-  foreach ($context['parts'] as $part => $group) {
-    if ($part == 'utilities/api') {
-      foreach ($context['utility_groups'] as $name => $keys) {
-        $rows['utilities:' . $name] = 'utilities';
-      }
+  // Parts a theme has in its own choice but the site-wide one hasn't.
+  $notes = array();
+  foreach (bootstrap_native_update_separate_themes() as $name => $mode) {
+    if ($mode != 'own') {
       continue;
     }
-    $rows[$part] = $group;
+    $own = bootstrap_native_update_plan_build($version, FALSE, $name);
+    $themes = list_themes();
+    foreach (bootstrap_native_update_selection_ids($own['effective']) as $id) {
+      if (!isset($chosen[$id])) {
+        $notes[$id] = '<span class="bnu-note-own">· ' . t('@theme has it in its own choice', array('@theme' => $themes[$name]->info['name'])) . '</span>';
+      }
+    }
   }
-  foreach ($rows as $id => $group) {
-    $state = 'optional';
-    $why = '';
-    if (isset($context['exclude'][$id])) {
-      $state = 'clash';
-      $why = $id == 'forms/floating-labels' && module_exists('floating_labels') ? t('The Floating Labels module does this') : check_plain($context['exclude'][$id]);
-    }
-    elseif (isset($required[$id])) {
-      $state = 'required';
-      $why = $group == 'base' ? t("Bootstrap's variables and base styles") : t("The theme's Drupal rules use it");
-    }
-    elseif (isset($context['needed_by'][$id])) {
-      $state = 'needed';
-      $why = t('Listed in @themes', array('@themes' => implode(', ', $context['needed_by'][$id])));
-    }
-    elseif (isset($used[$id])) {
-      $state = 'used';
-      $why = t('@theme: @file', array('@theme' => $used[$id]['theme'], '@file' => $used[$id]['file']));
-    }
-    $form['styles'][$id] = array(
-      '#type' => 'checkbox',
-      '#title' => bootstrap_native_update_part_name($id),
-      '#title_display' => 'invisible',
-      '#default_value' => isset($chosen[$id]) || in_array($state, array('required', 'needed')),
-      '#disabled' => !$sass || in_array($state, array('required', 'clash', 'needed')),
-      '#attributes' => array('data-size' => isset($sizes[$id]) ? $sizes[$id] : 0),
-      '#bnu_group' => $group,
-      '#bnu_state' => $state,
-      '#bnu_why' => $why,
-      '#bnu_size' => isset($sizes[$id]) ? $sizes[$id] : NULL,
-      '#bnu_docs' => !empty($docs[$id]) ? $info['docs_base'] . $docs[$id] . '/' : '',
-    );
-  }
+  $form['styles'] += bootstrap_native_update_parts_checkboxes($version, $context, $chosen, (bool) $sass, $used, $info, $notes);
 
   // Scripts: for information (one bundle).
   $form['scripts'] = array(
@@ -178,8 +150,161 @@ function bootstrap_native_update_components_form($form, &$form_state) {
   $form['actions']['download'] = array(
     '#markup' => l(t('Download the built files (.tar.gz)'), bootstrap_native_update_action_path('download', 'active'), array('query' => bootstrap_native_update_action_query('download', 'active'), 'attributes' => array('class' => array('bnu-download')))),
   );
-  $form['help'] = array('#markup' => '<p class="bnu-small">' . t("Docs: an icon linking to the part's page on getbootstrap.com, for the active release's docs; a part with no page found has none. Build and check runs the same checks as an update (a part the theme needs can't be left out; one a template uses shows as Check), then offers preview and apply. Download: the active build's stylesheet and script, for a site without a compiler or a sub-theme's repository.") . '</p>');
+  $site_names = array();
+  $themes = list_themes();
+  foreach (bootstrap_native_update_site_themes() as $name) {
+    $site_names[] = $themes[$name]->info['name'];
+  }
+  $form['help'] = array('#markup' => '<p class="bnu-small">' . t("Build and check builds every theme that uses the site-wide choice (here, @themes) and shows the results; themes with their own or fixed parts aren't touched. It runs the same checks as an update (a part the theme needs can't be left out; one a template uses shows as Check), then offers preview and apply. Docs: an icon linking to the part's page on getbootstrap.com, for the active release's docs; a part with no page found has none. Download: the site-wide build's stylesheet and script, for a site without a compiler or a sub-theme's repository (a theme with its own parts has its own download in the list above).", array('@themes' => $site_names ? implode(', ', $site_names) : t('none'))) . '</p>');
   return $form;
+}
+
+/**
+ * The ids of a selection's parts (utilities:<group> for utility groups).
+ */
+function bootstrap_native_update_selection_ids(array $effective) {
+  return array_merge($effective['parts'], array_map(function ($g) {
+    return 'utilities:' . $g;
+  }, $effective['utilities']));
+}
+
+/**
+ * How one selection differs from another: "+ Carousel, − Accordion".
+ */
+function bootstrap_native_update_selection_diff(array $effective, array $from) {
+  $now = bootstrap_native_update_selection_ids($effective);
+  $was = bootstrap_native_update_selection_ids($from);
+  $out = array();
+  foreach (array_diff($now, $was) as $id) {
+    $out[] = '+ ' . bootstrap_native_update_part_name($id);
+  }
+  foreach (array_diff($was, $now) as $id) {
+    $out[] = '− ' . bootstrap_native_update_part_name($id);
+  }
+  return $out;
+}
+
+/**
+ * The Themes list on the components page: which parts each theme uses.
+ */
+function bootstrap_native_update_components_themes($version, array $site_effective) {
+  $themes = list_themes();
+  $separate = bootstrap_native_update_separate_themes();
+  $builds = bootstrap_native_update_builds();
+  $default = variable_get('theme_default', 'bartik');
+  $admin = variable_get('admin_theme', '');
+  $rows = array();
+  foreach (bootstrap_native_update_themes_in_use() as $name => $title) {
+    $mode = isset($separate[$name]) ? $separate[$name] : 'site';
+    $cell = '<strong>' . check_plain($title) . '</strong>';
+    if ($name == $default) {
+      $cell .= ' <span class="bnu-small">(' . t('default theme') . ')</span>';
+    }
+    elseif ($name == $admin) {
+      $cell .= ' <span class="bnu-small">(' . t('administration theme') . ')</span>';
+    }
+    $build = bootstrap_native_update_build_for_theme($name);
+    $actions = array(l($mode == 'fixed' ? t('View its parts') : t('Settings'), 'admin/appearance/settings/' . $name, array('fragment' => 'bn-step-components')));
+    if ($mode == 'fixed') {
+      $plan = bootstrap_native_update_plan_build($version, FALSE, $name);
+      $parts = '<span class="bnu-badge bnu-badge-fixed">' . t('Fixed in its .info') . '</span> <span class="bnu-small">' . format_plural(count(bootstrap_native_update_selection_ids($plan['effective'])), '1 part its pages are built for', '@count parts its pages are built for') . '</span>';
+    }
+    elseif ($mode == 'own') {
+      $plan = bootstrap_native_update_plan_build($version, FALSE, $name);
+      $diff = bootstrap_native_update_selection_diff($plan['effective'], $site_effective);
+      $parts = '<span class="bnu-badge bnu-badge-own">' . t('Its own') . '</span> <span class="bnu-small">' . ($diff ? t('site-wide @changes', array('@changes' => implode(', ', $diff))) : t('the same as the site-wide choice')) . '</span>';
+      if ($plan['build'] !== $build) {
+        $parts .= '<div class="bnu-small">' . t('Not applied yet: its pages use the site-wide build until its check results are applied.') . '</div>';
+      }
+    }
+    else {
+      $parts = '<span class="bnu-badge bnu-badge-site">' . t('Site-wide choice') . '</span>';
+    }
+    if ($build !== bootstrap_native_update_active()) {
+      $actions[] = l(t('Download'), bootstrap_native_update_action_path('download', $name), array('query' => bootstrap_native_update_action_query('download', $name)));
+    }
+    $size = $build === '' ? filesize(bootstrap_native_update_theme_dir() . '/css/bootstrap_native.css') : (isset($builds[$build]['meta']['size']) ? $builds[$build]['meta']['size'] : 0);
+    $rows[] = array($cell, $parts, array('data' => t('@kb KB', array('@kb' => round($size / 1024))), 'class' => array('bnu-size')), '<span class="bnu-actions">' . implode(' ', $actions) . '</span>');
+  }
+  return array(
+    '#type' => 'container',
+    '#attributes' => array('class' => array('bnu-section')),
+    'title' => array('#markup' => '<h2>' . t('Themes') . '</h2>'),
+    'text' => array('#markup' => '<p class="bnu-muted">' . t("Every Bootstrap Native theme uses the site-wide choice below, unless its settings page gives it its own, or its .info file fixes its parts. Themes with the same parts share one stylesheet. All use Bootstrap @version.", array('@version' => $version)) . '</p>'),
+    'table' => array(
+      '#theme' => 'table',
+      '#prefix' => '<div class="bnu-table">',
+      '#suffix' => '</div>',
+      '#header' => array(t('Theme'), t('Its parts'), t('Stylesheet'), array('data' => '<span class="element-invisible">' . t('Actions') . '</span>')),
+      '#rows' => $rows,
+      '#empty' => t('No Bootstrap Native theme is enabled.'),
+    ),
+  );
+}
+
+/**
+ * The parts table's checkboxes: one per part, with why it is in or out.
+ *
+ * @param array $chosen
+ *   Part ids (utilities:<group> for utility groups) that are on.
+ * @param array $notes
+ *   Extra words for a part's Why column, keyed by part id (HTML).
+ */
+function bootstrap_native_update_parts_checkboxes($version, array $context, array $chosen, $sass, array $used, $info, array $notes = array()) {
+  $sizes = $info ? $info['sizes'] : array();
+  $docs = $info ? $info['docs'] : array();
+  $required = array_flip($context['required']);
+  $elements = array();
+  $rows = array();
+  foreach ($context['parts'] as $part => $group) {
+    if ($part == 'utilities/api') {
+      foreach ($context['utility_groups'] as $name => $keys) {
+        $rows['utilities:' . $name] = 'utilities';
+      }
+      continue;
+    }
+    $rows[$part] = $group;
+  }
+  foreach ($rows as $id => $group) {
+    $state = 'optional';
+    $why = '';
+    if (isset($context['exclude'][$id])) {
+      $state = 'clash';
+      $why = $id == 'forms/floating-labels' && module_exists('floating_labels') ? t('The Floating Labels module does this') : check_plain($context['exclude'][$id]);
+    }
+    elseif (isset($required[$id])) {
+      $state = 'required';
+      $why = $group == 'base' ? t("Bootstrap's variables and base styles") : t("The theme's Drupal rules use it");
+    }
+    elseif (isset($context['needed_by'][$id])) {
+      $state = 'needed';
+      $why = t('Listed in @themes', array('@themes' => implode(', ', $context['needed_by'][$id])));
+    }
+    elseif (isset($used[$id])) {
+      $state = 'used';
+      $why = t('@theme: @file', array('@theme' => $used[$id]['theme'], '@file' => $used[$id]['file']));
+    }
+    $elements[$id] = array(
+      '#type' => 'checkbox',
+      '#title' => bootstrap_native_update_part_name($id),
+      '#title_display' => 'invisible',
+      '#default_value' => isset($chosen[$id]) || in_array($state, array('required', 'needed')),
+      '#disabled' => !$sass || in_array($state, array('required', 'clash', 'needed')),
+      '#attributes' => array('data-size' => isset($sizes[$id]) ? $sizes[$id] : 0),
+      '#bnu_group' => $group,
+      '#bnu_state' => $state,
+      '#bnu_why' => $why,
+      '#bnu_size' => isset($sizes[$id]) ? $sizes[$id] : NULL,
+      '#bnu_docs' => !empty($docs[$id]) ? $info['docs_base'] . $docs[$id] . '/' : '',
+    );
+  }
+
+  foreach ($notes as $id => $note) {
+    if (isset($elements[$id])) {
+      $elements[$id]['#bnu_why'] .= ($elements[$id]['#bnu_why'] !== '' ? ' ' : '') . $note;
+    }
+  }
+  return $elements;
 }
 
 /**
@@ -507,15 +632,17 @@ function theme_bootstrap_native_update_components_table($variables) {
     t('Size'),
     t('Docs'),
   );
-  return '<div class="bnu-section"><h2>' . t('Styles (Sass modules)') . '</h2><div class="bnu-table">' . theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('class' => array('bnu-parts')))) . '</div></div>';
+  $title = isset($element['#bnu_title']) ? $element['#bnu_title'] : t('Styles (Sass modules)');
+  $intro = isset($element['#bnu_intro']) ? '<p class="bnu-muted">' . $element['#bnu_intro'] . '</p>' : '';
+  return '<div class="bnu-section">' . ($title !== '' ? '<h2>' . $title . '</h2>' : '') . $intro . '<div class="bnu-table">' . theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('class' => array('bnu-parts')))) . '</div></div>';
 }
 
 /**
  * Sends the active build (or the theme's own files) as a .tar.gz.
  */
-function bootstrap_native_update_download_build() {
+function bootstrap_native_update_download_build($theme = NULL) {
   require_once DRUPAL_ROOT . '/modules/system/system.tar.inc';
-  $active = bootstrap_native_update_active();
+  $active = $theme === NULL ? bootstrap_native_update_active() : bootstrap_native_update_build_for_theme($theme);
   $label = bootstrap_native_update_build_label($active);
   if ($active === '') {
     $css = bootstrap_native_update_theme_dir() . '/css/bootstrap_native.css';

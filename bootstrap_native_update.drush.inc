@@ -154,6 +154,16 @@ function drush_bootstrap_native_update_bootstrap_native_check($version = NULL) {
   drush_print_table($rows);
   drush_print(dt('Build: !build', array('!build' => $build)));
   drush_print(dt('Verdict: !verdict', array('!verdict' => $result['verdict'])));
+  // Themes with own or fixed parts: a line each, then the overall verdict.
+  if (!empty($builds[$build]['theme_builds'])) {
+    $per_theme = bootstrap_native_update_results_per_theme($build);
+    foreach ($per_theme as $key => $row) {
+      if ($key != 'site') {
+        drush_print(dt('Theme !theme (!mode parts): !verdict (!build)', array('!theme' => implode(', ', $row['themes']), '!mode' => $row['mode'], '!verdict' => $row['check'] ? $row['check']['verdict'] : 'not checked', '!build' => $row['build'])));
+      }
+    }
+    drush_print(dt('All themes: !verdict', array('!verdict' => bootstrap_native_update_worst_verdict($per_theme))));
+  }
 }
 
 /**

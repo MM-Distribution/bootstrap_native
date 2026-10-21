@@ -434,6 +434,10 @@ function bootstrap_native_update_result_build($arg) {
  */
 function bootstrap_native_update_result_title($arg) {
   $build = bootstrap_native_update_result_build($arg);
+  $themes = list_themes();
+  if ($build && isset($_GET['theme']) && is_string($_GET['theme']) && isset($themes[$_GET['theme']])) {
+    return t('@theme with its own parts: check results', array('@theme' => $themes[$_GET['theme']]->info['name']));
+  }
   if ($build && substr($build, -8) != '~default') {
     return t('Bootstrap @version with chosen parts: check results', array('@version' => bootstrap_native_update_build_version($build)));
   }
@@ -464,7 +468,10 @@ function bootstrap_native_update_result_page($arg) {
   $record = $builds[$build_name];
   $result = $record['check'];
   $build = array('#attached' => bootstrap_native_update_admin_css());
-  $active = $build_name === bootstrap_native_update_active();
+  // A theme's own parts (from its settings page): applies to that theme.
+  $theme_scope = isset($_GET['theme']) && is_string($_GET['theme']) && bootstrap_native_update_parts_mode($_GET['theme']) == 'own' && bootstrap_native_update_build_version($build_name) === bootstrap_native_update_active_version() ? $_GET['theme'] : NULL;
+  $in_use = $theme_scope === NULL ? bootstrap_native_update_active() : bootstrap_native_update_build_for_theme($theme_scope);
+  $active = $build_name === $in_use;
 
   switch ($result['verdict']) {
     case 'passed':
@@ -483,12 +490,112 @@ function bootstrap_native_update_result_page($arg) {
       $build['notice'] = bootstrap_native_update_notice('error', t("<strong>This doesn't build with Bootstrap Native.</strong> Something the theme relies on is gone, so there is nothing to preview or apply."));
       break;
   }
-  if ($result['against'] !== bootstrap_native_update_active() && !$active) {
+  if ($result['against'] !== $in_use && !$active) {
     $against = bootstrap_native_update_build_label($result['against']);
-    $now = bootstrap_native_update_build_label(bootstrap_native_update_active());
+    $now = bootstrap_native_update_build_label($in_use);
     $build['stale'] = bootstrap_native_update_notice('warning', t('These results compare with @old (@old_parts); the site now runs @current (@current_parts). Check again for an up-to-date comparison.', array('@old' => $against['version'], '@old_parts' => $against['parts'], '@current' => $now['version'], '@current_parts' => $now['parts'])));
   }
 
+  $per_theme = $theme_scope === NULL && !empty($record['theme_builds']) ? bootstrap_native_update_results_per_theme($build_name) : array();
+  if ($per_theme) {
+    // One release for every theme: a section each, the worst sets the
+    // banner and whether "I understand" is needed.
+    $verdict = bootstrap_native_update_worst_verdict($per_theme);
+    $build['notice'] = bootstrap_native_update_per_theme_notice($per_theme, $verdict);
+    $build['themes'] = bootstrap_native_update_per_theme_sections($per_theme);
+    $result['verdict'] = $verdict;
+  }
+  else {
+    $build += bootstrap_native_update_result_details($result);
+  }
+
+  if ($active) {
+    $build['active'] = array('#markup' => '<p><strong>' . t('This build is active.') . '</strong> ' . l(t('Back to Bootstrap updates'), 'admin/appearance/bootstrap-updates') . '</p>');
+  }
+  elseif ($result['verdict'] != 'failed') {
+    $build['apply'] = drupal_get_form('bootstrap_native_update_apply_form', $build_name, $result['verdict'], $theme_scope, $per_theme);
+  }
+  else {
+    $build['discard'] = array('#markup' => '<p>' . l(t('Discard'), bootstrap_native_update_action_path('discard', $build_name), array('query' => bootstrap_native_update_action_query('discard', $build_name))) . ' · ' . l(t('Back to Bootstrap updates'), 'admin/appearance/bootstrap-updates') . '</p>');
+  }
+  return $build;
+}
+
+/**
+ * The banner of per-theme results (the worst one decides).
+ */
+function bootstrap_native_update_per_theme_notice(array $rows, $verdict) {
+  $count = count(array_filter($rows, function ($row) use ($verdict) {
+    return ($row['check'] ? $row['check']['verdict'] : 'failed') == $verdict;
+  }));
+  $after = ' ' . t('Each theme was built with its own parts; the release applies to all of them at once.');
+  switch ($verdict) {
+    case 'passed':
+      return bootstrap_native_update_notice('status', '<strong>' . t('Passed every check, for every theme.') . '</strong>' . $after);
+
+    case 'check':
+      return bootstrap_native_update_notice('warning', '<strong>' . format_plural($count, 'Passed, with things to look at in 1 theme.', 'Passed, with things to look at in @count themes.') . '</strong>' . $after);
+
+    case 'breaks':
+      return bootstrap_native_update_notice('error', '<strong>' . format_plural($count, 'Would break parts of 1 theme.', 'Would break parts of @count themes.') . '</strong>' . $after);
+  }
+  return bootstrap_native_update_notice('error', '<strong>' . format_plural($count, "Doesn't build for 1 theme.", "Doesn't build for @count themes.") . '</strong> ' . t('There is nothing to preview or apply until it builds for every theme.'));
+}
+
+/**
+ * Per-theme results: links to each, then a section each.
+ */
+function bootstrap_native_update_per_theme_sections(array $rows) {
+  $labels = array(
+    'site' => t('site-wide choice'),
+    'own' => t('its own parts'),
+    'fixed' => t('fixed parts'),
+  );
+  $chips = '';
+  $out = array();
+  foreach ($rows as $key => $row) {
+    $verdict = $row['check'] ? $row['check']['verdict'] : 'failed';
+    $names = check_plain(implode(', ', $row['themes']));
+    $id = 'bnu-theme-' . drupal_html_class($key);
+    $chips .= '<a class="bnu-chip" href="#' . $id . '">' . bootstrap_native_update_verdict_badge($verdict) . ' ' . $names . '</a>';
+    $section = array(
+      '#type' => 'container',
+      '#attributes' => array('class' => array('bnu-section', 'bnu-theme-result'), 'id' => $id),
+      'title' => array('#markup' => '<h2>' . $names . ' <span class="bnu-small">(' . $labels[$row['mode']] . ')</span> ' . bootstrap_native_update_verdict_badge($verdict) . '</h2>'),
+    );
+    if (!$row['check']) {
+      $section['none'] = array('#markup' => '<p>' . t('Not checked.') . '</p>');
+    }
+    elseif ($verdict == 'passed') {
+      $section['passed'] = array('#markup' => '<p class="bnu-muted">' . t('Every check passed.') . '</p>');
+      $section['details'] = array(
+        '#prefix' => '<details class="bnu-details"><summary>' . t('Details') . '</summary>',
+        '#suffix' => '</details>',
+      ) + bootstrap_native_update_result_details($row['check']);
+    }
+    else {
+      $section += bootstrap_native_update_result_details($row['check']);
+    }
+    $out[$key] = $section;
+  }
+  return array('chips' => array('#markup' => '<nav class="bnu-chips bnu-theme-chips" aria-label="' . t('Themes in these results') . '">' . $chips . '</nav>')) + $out;
+}
+
+/**
+ * A verdict as a badge (passed included).
+ */
+function bootstrap_native_update_verdict_badge($verdict) {
+  if ($verdict == 'passed') {
+    return '<span class="bnu-badge bnu-badge-passed">' . t('Passed') . '</span>';
+  }
+  return bootstrap_native_update_badge($verdict);
+}
+
+/**
+ * The details of one check result: the passed table, or what breaks.
+ */
+function bootstrap_native_update_result_details(array $result) {
+  $out = array();
   if (in_array($result['verdict'], array('passed', 'check'))) {
     $rows = array();
     foreach ($result['rows'] as $row) {
@@ -499,14 +606,14 @@ function bootstrap_native_update_result_page($arg) {
         ($text['details'] !== '' ? $text['details'] : $text['changed'] . ($text['affects'] !== '' ? ': ' . $text['affects'] : '')) . ($text['where'] ? '<div class="bnu-small">' . $text['where'] . '</div>' : ''),
       );
     }
-    $build['table'] = array(
+    $out['table'] = array(
       '#theme' => 'table',
       '#prefix' => '<div class="bnu-table">',
       '#suffix' => '</div>',
       '#header' => array(array('data' => '<span class="element-invisible">' . t('Result') . '</span>'), t('Check'), t('Details')),
       '#rows' => $rows,
     );
-    $build['help'] = array('#markup' => '<p class="bnu-muted">' . t("These checks catch structural breaks. They can't see whether something looks different; the preview shows you.") . '</p>');
+    $out['help'] = array('#markup' => '<p class="bnu-muted">' . t("These checks catch structural breaks. They can't see whether something looks different; the preview shows you.") . '</p>');
   }
   else {
     $rows = array();
@@ -526,8 +633,8 @@ function bootstrap_native_update_result_page($arg) {
         $text['affects'] . ($text['where'] ? '<div class="bnu-small">' . $text['where'] . '</div>' : ''),
       );
     }
-    $build['heading'] = array('#markup' => '<h2>' . t('What breaks') . '</h2>');
-    $build['table'] = array(
+    $out['heading'] = array('#markup' => '<h2>' . t('What breaks') . '</h2>');
+    $out['table'] = array(
       '#theme' => 'table',
       '#prefix' => '<div class="bnu-table">',
       '#suffix' => '</div>',
@@ -535,20 +642,11 @@ function bootstrap_native_update_result_page($arg) {
       '#rows' => $rows,
     );
     if ($result['verdict'] == 'breaks') {
-      $build['help'] = array('#markup' => '<p class="bnu-muted">' . t('Rows marked as !badge come from the theme itself: the fix is a Bootstrap Native update. Until then you can keep the current version, or apply this one and live with the list.', array('!badge' => bootstrap_native_update_badge('breaks'))) . '</p>');
+      $out['help'] = array('#markup' => '<p class="bnu-muted">' . t('Rows marked as !badge come from the theme itself: the fix is a Bootstrap Native update. Until then you can keep the current version, or apply this one and live with the list.', array('!badge' => bootstrap_native_update_badge('breaks'))) . '</p>');
     }
   }
 
-  if ($active) {
-    $build['active'] = array('#markup' => '<p><strong>' . t('This build is active.') . '</strong> ' . l(t('Back to Bootstrap updates'), 'admin/appearance/bootstrap-updates') . '</p>');
-  }
-  elseif ($result['verdict'] != 'failed') {
-    $build['apply'] = drupal_get_form('bootstrap_native_update_apply_form', $build_name, $result['verdict']);
-  }
-  else {
-    $build['discard'] = array('#markup' => '<p>' . l(t('Discard'), bootstrap_native_update_action_path('discard', $build_name), array('query' => bootstrap_native_update_action_query('discard', $build_name))) . ' · ' . l(t('Back to Bootstrap updates'), 'admin/appearance/bootstrap-updates') . '</p>');
-  }
-  return $build;
+  return $out;
 }
 
 /**
@@ -661,20 +759,30 @@ function bootstrap_native_update_row_text(array $row) {
 /**
  * Form: Apply, Preview, Discard (results page).
  */
-function bootstrap_native_update_apply_form($form, &$form_state, $build, $verdict) {
+function bootstrap_native_update_apply_form($form, &$form_state, $build, $verdict, $theme = NULL, $per_theme = array()) {
   $form['build'] = array('#type' => 'value', '#value' => $build);
+  $form['theme'] = array('#type' => 'value', '#value' => $theme);
+  $form['verdict'] = array('#type' => 'value', '#value' => $verdict);
   if ($verdict == 'breaks') {
     $form['#attributes']['class'][] = 'bnu-confirm';
-    $now = bootstrap_native_update_build_label(bootstrap_native_update_active());
+    $now = bootstrap_native_update_build_label($theme === NULL ? bootstrap_native_update_active() : bootstrap_native_update_build_for_theme($theme));
+    $broken = array();
+    foreach ($per_theme as $row) {
+      if ($row['check'] && $row['check']['verdict'] == 'breaks') {
+        $broken = array_merge($broken, $row['themes']);
+      }
+    }
     $form['understood'] = array(
       '#type' => 'checkbox',
-      '#title' => t('I understand that the parts listed above will break until Bootstrap Native is updated.') . ' <span class="bnu-muted">' . t('You can roll back to @version at any time.', array('@version' => $now['version'])) . '</span>',
+      '#title' => ($broken
+        ? t('I understand that parts of @themes will break until it is updated.', array('@themes' => implode(', ', $broken)))
+        : t('I understand that the parts listed above will break until Bootstrap Native is updated.')) . ' <span class="bnu-muted">' . t('You can roll back to @version at any time.', array('@version' => $now['version'])) . '</span>',
     );
   }
   $form['actions'] = array('#type' => 'actions');
   $form['actions']['apply'] = array(
     '#type' => 'submit',
-    '#value' => $verdict == 'breaks' ? t('Apply anyway') : t('Apply update'),
+    '#value' => $verdict == 'breaks' ? ($per_theme ? t('Apply anyway (all themes)') : t('Apply anyway')) : ($theme !== NULL ? t('Apply to this theme') : ($per_theme ? t('Apply update (all themes)') : t('Apply update'))),
     '#attributes' => array('class' => array($verdict == 'breaks' ? 'bnu-danger' : 'button--primary')),
     '#submit' => array('bootstrap_native_update_apply_form_apply'),
   );
@@ -690,7 +798,9 @@ function bootstrap_native_update_apply_form($form, &$form_state, $build, $verdic
   $form['actions']['discard'] = array(
     '#markup' => l(t('Discard'), bootstrap_native_update_action_path('discard', $build), array('query' => bootstrap_native_update_action_query('discard', $build), 'attributes' => array('class' => array('bnu-link')))),
   );
-  $form['actions']['help'] = array('#markup' => '<div class="bnu-small bnu-full">' . t('Preview: only you see the new version while browsing the site. Discard removes the download.') . '</div>');
+  $form['actions']['help'] = array('#markup' => '<div class="bnu-small bnu-full">' . ($per_theme
+    ? t('Preview: only you see the new version while browsing, on the site and on admin pages (each theme with its own build). The worst result sets the banner and the "I understand" box; roll back returns every theme together. Discard removes the download.')
+    : t('Preview: only you see the new version while browsing the site. Discard removes the download.')) . '</div>');
   return $form;
 }
 
@@ -699,14 +809,30 @@ function bootstrap_native_update_apply_form($form, &$form_state, $build, $verdic
  */
 function bootstrap_native_update_apply_form_apply($form, &$form_state) {
   $build = $form_state['values']['build'];
+  $theme = $form_state['values']['theme'];
   $builds = bootstrap_native_update_builds();
-  if (empty($builds[$build]['meta']) || empty($builds[$build]['check']) || $builds[$build]['check']['verdict'] == 'failed') {
+  // The verdict again from the records (per theme: the worst).
+  $verdict = !empty($builds[$build]['check']) ? $builds[$build]['check']['verdict'] : 'failed';
+  if ($theme === NULL && !empty($builds[$build]['theme_builds'])) {
+    $verdict = bootstrap_native_update_worst_verdict(bootstrap_native_update_results_per_theme($build));
+  }
+  if (empty($builds[$build]['meta']) || $verdict == 'failed') {
     drupal_set_message(t('There is nothing to apply. Check it again.'), 'error');
     return;
   }
-  if ($builds[$build]['check']['verdict'] == 'breaks' && empty($form_state['values']['understood'])) {
+  if ($verdict == 'breaks' && empty($form_state['values']['understood'])) {
     drupal_set_message(t('Tick "I understand" to apply a release that breaks parts of the theme.'), 'error');
-    $form_state['redirect'] = 'admin/appearance/bootstrap-updates/result/' . $build;
+    $form_state['redirect'] = array('admin/appearance/bootstrap-updates/result/' . $build, $theme !== NULL ? array('query' => array('theme' => $theme)) : array());
+    return;
+  }
+  if ($theme !== NULL) {
+    if (bootstrap_native_update_parts_mode($theme) == 'own' && $builds[$build]['version'] === bootstrap_native_update_active_version()) {
+      bootstrap_native_update_save_build_record($build, array('applied_theme' => REQUEST_TIME));
+      bootstrap_native_update_apply_theme_build($theme, $build);
+      $themes = list_themes();
+      drupal_set_message(t('<strong>@theme now uses its own parts.</strong> Other themes are unchanged.', array('@theme' => $themes[$theme]->info['name'])));
+    }
+    $form_state['redirect'] = 'admin/appearance/settings/' . $theme;
     return;
   }
   bootstrap_native_update_apply($build);
@@ -719,7 +845,7 @@ function bootstrap_native_update_apply_form_apply($form, &$form_state) {
 function bootstrap_native_update_apply($build) {
   bootstrap_native_update_save_build_record($build, array('applied' => REQUEST_TIME));
   bootstrap_native_update_activate($build);
-  unset($_SESSION['bootstrap_native_update_preview']);
+  unset($_SESSION['bootstrap_native_update_preview'], $_SESSION['bootstrap_native_update_preview_theme']);
   $label = bootstrap_native_update_build_label($build);
   drupal_set_message(t('<strong>Bootstrap @version (@parts) is now active.</strong> The previous version stays installed: roll back below if anything looks wrong. Open pages show the old version until they are reloaded.', array('@version' => $label['version'], '@parts' => $label['parts'])));
 }
@@ -729,37 +855,52 @@ function bootstrap_native_update_apply($build) {
  */
 function bootstrap_native_update_apply_form_preview($form, &$form_state) {
   // From the form's arguments: #limit_validation_errors leaves no values.
-  $_SESSION['bootstrap_native_update_preview'] = $form_state['build_info']['args'][0];
+  $args = $form_state['build_info']['args'];
+  if (!empty($args[2])) {
+    // One theme's own parts: its pages show them.
+    $_SESSION['bootstrap_native_update_preview_theme'] = array('theme' => $args[2], 'build' => $args[0]);
+    $form_state['redirect'] = $args[2] == variable_get('admin_theme', '') ? 'admin' : '<front>';
+    return;
+  }
+  $_SESSION['bootstrap_native_update_preview'] = $args[0];
   $form_state['redirect'] = '<front>';
 }
 
 /**
  * The preview bar at the top of every page while previewing.
  */
-function bootstrap_native_update_preview_bar($build) {
+function bootstrap_native_update_preview_bar($build, $theme = NULL) {
   $label = bootstrap_native_update_build_label($build);
   $now = bootstrap_native_update_build_label(bootstrap_native_update_active());
+  if ($theme !== NULL) {
+    $themes = list_themes();
+    $label['parts'] = t("@theme's own parts", array('@theme' => $themes[$theme]->info['name']));
+  }
   return array(
     '#attached' => bootstrap_native_update_admin_css(),
     '#prefix' => '<div role="region" aria-label="' . t('Bootstrap preview') . '" class="bnu-preview">',
     '#suffix' => '</div>',
     'text' => array('#markup' => '<div class="bnu-preview-text"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg><span>'
       . t('<strong>Previewing Bootstrap @version</strong> (@parts). Only you see this; visitors still get @current.', array('@version' => $label['version'], '@parts' => $label['parts'], '@current' => $now['version'])) . '</span></div>'),
-    'form' => drupal_get_form('bootstrap_native_update_preview_form', $build),
+    'form' => drupal_get_form('bootstrap_native_update_preview_form', $build, $theme),
   );
 }
 
 /**
  * Form: the preview bar's buttons.
  */
-function bootstrap_native_update_preview_form($form, &$form_state, $build) {
+function bootstrap_native_update_preview_form($form, &$form_state, $build, $theme = NULL) {
   $builds = bootstrap_native_update_builds();
   $form['#attributes']['class'][] = 'bnu-preview-actions';
   $form['build'] = array('#type' => 'value', '#value' => $build);
-  $form['back'] = array('#markup' => l(t('Back to the results'), 'admin/appearance/bootstrap-updates/result/' . $build));
-  // A build that breaks things is applied from its results page, where
-  // "I understand" is.
-  if (isset($builds[$build]['check']['verdict']) && $builds[$build]['check']['verdict'] != 'breaks') {
+  $form['back'] = array('#markup' => l(t('Back to the results'), 'admin/appearance/bootstrap-updates/result/' . $build, $theme !== NULL ? array('query' => array('theme' => $theme)) : array()));
+  // A build that breaks things (for any theme) is applied from its results
+  // page, where "I understand" is; a theme's own parts from theirs too.
+  $verdict = isset($builds[$build]['check']['verdict']) ? $builds[$build]['check']['verdict'] : 'failed';
+  if ($theme === NULL && !empty($builds[$build]['theme_builds'])) {
+    $verdict = bootstrap_native_update_worst_verdict(bootstrap_native_update_results_per_theme($build));
+  }
+  if ($theme === NULL && $verdict != 'breaks' && $verdict != 'failed') {
     $form['apply'] = array('#type' => 'submit', '#value' => t('Apply'), '#submit' => array('bootstrap_native_update_preview_form_apply'));
   }
   $form['stop'] = array('#type' => 'submit', '#value' => t('Stop preview'), '#submit' => array('bootstrap_native_update_preview_form_stop'));
@@ -772,7 +913,11 @@ function bootstrap_native_update_preview_form($form, &$form_state, $build) {
 function bootstrap_native_update_preview_form_apply($form, &$form_state) {
   $build = $form_state['values']['build'];
   $builds = bootstrap_native_update_builds();
-  if (!empty($builds[$build]['meta']) && isset($builds[$build]['check']['verdict']) && in_array($builds[$build]['check']['verdict'], array('passed', 'check'))) {
+  $verdict = isset($builds[$build]['check']['verdict']) ? $builds[$build]['check']['verdict'] : 'failed';
+  if (!empty($builds[$build]['theme_builds'])) {
+    $verdict = bootstrap_native_update_worst_verdict(bootstrap_native_update_results_per_theme($build));
+  }
+  if (!empty($builds[$build]['meta']) && in_array($verdict, array('passed', 'check'))) {
     bootstrap_native_update_apply($build);
   }
   $form_state['redirect'] = 'admin/appearance/bootstrap-updates';
@@ -782,7 +927,7 @@ function bootstrap_native_update_preview_form_apply($form, &$form_state) {
  * Form submit: Stop preview.
  */
 function bootstrap_native_update_preview_form_stop($form, &$form_state) {
-  unset($_SESSION['bootstrap_native_update_preview']);
+  unset($_SESSION['bootstrap_native_update_preview'], $_SESSION['bootstrap_native_update_preview_theme']);
   drupal_set_message(t('Preview stopped.'));
 }
 
@@ -902,7 +1047,8 @@ function bootstrap_native_update_action($op, $target) {
 
     case 'download':
       module_load_include('inc', 'bootstrap_native_update', 'includes/components');
-      bootstrap_native_update_download_build();
+      $themes = list_themes();
+      bootstrap_native_update_download_build($target !== 'active' && isset($themes[$target]) ? $target : NULL);
       break;
 
     case 'measure':

@@ -10,6 +10,10 @@ A sub-theme of Bootstrap Native, created by
 
 Bootstrap's parts, Sass and plugins: see the end of STARTERKIT.info.
 - bootstrap_native[parts][] adds a Bootstrap part to the site's build.
+- bootstrap_native[parts_fixed] = TRUE builds this theme with only its
+  parts[] (and bootstrap_native[utilities][] groups), whatever the site
+  chooses: for a theme made for its own pages. Otherwise its settings page
+  (step 6) can give it its own parts.
 - bootstrap_native[sass][] builds a Sass module of this theme in after
   Bootstrap (it can @use "bootstrap/scss/..." and Bootstrap's variables).
 - bootstrap_native[js][] loads an ES module after Bootstrap's script; it can

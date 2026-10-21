@@ -49,6 +49,8 @@ should port to Backdrop CMS later: plain Drupal 7 APIs, no Composer.
       sass.inc         installing Dart Sass (drush only)
       subtheme.inc     sub-theme generator; subtheme_form.inc is its page
       svg.inc          cleans uploaded SVG logos and browser icons (plain PHP)
+      themes.inc       parts per theme: fixed, own or site-wide; theme builds
+      theme_parts.inc  step 6 of a theme's settings (its Bootstrap components)
     css/, js/          the module's admin pages
     starterkit/        what a new sub-theme starts from (STARTERKIT is replaced)
     themes/bootstrap_native/
@@ -120,9 +122,10 @@ Variables (all `bootstrap_native_update_*`):
 
 | Variable | What |
 |---|---|
-| `active`, `previous` | build names in use / before ('' = prebuilt files) |
+| `active`, `previous` | the site-wide build in use / before ('' = prebuilt files) |
+| `theme_builds`, `previous_theme_builds` | theme => build for themes with own or fixed parts (applied ones only) / before the last switch (includes/themes.inc) |
 | `selection` | the site's choice of parts: NULL = the theme's, else `array('parts' => ids, 'utilities' => groups)` |
-| `builds` | records per build: version, input, effective, sass, meta (size, stamp, theme_hash, counts), check, applied, inactive_since, error |
+| `builds` | records per build: version, input, theme (made for; NULL = site-wide), theme_builds (a release check's builds per theme), effective, sass, meta (size, stamp, theme_hash, counts), check, applied, applied_theme, inactive_since, error |
 | `versions` | downloaded releases: downloaded, uid, inactive_since, error, build |
 | `releases`, `checked` | Bootstrap 6 releases from the npm registry, when last fetched |
 | `last_build` | the build the last release check made |
@@ -140,16 +143,29 @@ Files:
 
 - `bootstrap_native_update_active()`, `_active_version()`,
   `_shipped_version()`: what's in use.
-- `bootstrap_native_update_plan_build($version, $selection = FALSE)`:
-  which build a choice makes, without making it. FALSE means the site's
-  choice; NULL means the theme's.
-- `bootstrap_native_update_make_build($version, $selection)`: compile it
-  and record it. Returns `array('build', 'error')`.
-- `bootstrap_native_update_check_build($build)`: run the checks against
-  the active build and record the result.
-- `bootstrap_native_update_activate($build)`: switch the site (it also
-  sets the selection, starts the 30 days for what stopped being used and
-  clears CSS/JS/page caches).
+- `bootstrap_native_update_plan_build($version, $selection = FALSE, $theme = NULL)`:
+  which build a choice makes, without making it. FALSE means what applies
+  (the site's choice, or the theme's own or fixed parts); NULL means the
+  theme's defaults. With `$theme`, the build for that theme (its .info
+  needs only; fixed parts always win).
+- `bootstrap_native_update_make_build($version, $selection, $theme = NULL)`:
+  compile it and record it. Returns `array('build', 'error')`.
+- `bootstrap_native_update_check_build($build, $against = NULL, $themes = NULL)`:
+  run the checks against the active build (or `$against`) and record the
+  result.
+- `bootstrap_native_update_activate($build, $theme_builds = NULL)`: switch
+  the site; themes with own or fixed parts switch with it (to the builds a
+  release check made, the previous ones on a roll back, else theirs). It
+  also sets the selection, starts the 30 days for what stopped being used
+  and clears CSS/JS/page caches.
+- Parts per theme (includes/themes.inc): `_parts_mode($theme)` ('fixed',
+  'own', 'site'), `_build_for_theme($theme, $site_build = NULL)` (what its
+  pages use), `_apply_theme_build()`, `_rebuild_theme_builds()` (cache
+  clears, themes enabled/disabled), `_results_per_theme()`,
+  `_worst_verdict()`. A theme's own choice is saved in its settings
+  (`bootstrap_native_parts`) and only used once its check is applied;
+  fixed parts are built and used without one. Step 6 of the theme
+  settings is includes/theme_parts.inc.
 - `bootstrap_native_update_discard_build($build)`,
   `_discard_release($version)`, `_cleanup()` (cron: removes what has been
   inactive for 30 days).
@@ -228,6 +244,8 @@ The theme implements:
     bootstrap_native[parts][] = carousel           ; a Bootstrap part to build in
     bootstrap_native[sass][] = scss/_extras.scss   ; a Sass module, after Bootstrap's parts
     bootstrap_native[js][] = js/plugin.js          ; an ES module plugin, after Bootstrap's script
+    bootstrap_native[parts_fixed] = TRUE           ; only its parts[] and utilities[] (the admin theme)
+    bootstrap_native[utilities][] = display        ; utility groups, with parts_fixed
 
 - **When they take effect:** after a cache clear. The build is redone,
   which needs Dart Sass.

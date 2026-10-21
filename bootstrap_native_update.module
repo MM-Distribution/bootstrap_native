@@ -179,7 +179,7 @@ function bootstrap_native_update_menu() {
  * The files the page should use, or NULL for the theme's own.
  *
  * The build being previewed (only for the admin previewing it), else the
- * active build.
+ * active build; for a theme with own or fixed parts, its build of either.
  *
  * @return array|null
  *   Keys build, css (path from the Drupal root), js (URL).
@@ -191,10 +191,9 @@ function bootstrap_native_update_files() {
   }
   module_load_include('inc', 'bootstrap_native_update', 'includes/releases');
   $files = NULL;
-  $build = bootstrap_native_update_preview();
-  if ($build === NULL) {
-    $build = bootstrap_native_update_active();
-  }
+  $theme = !empty($GLOBALS['theme_key']) ? $GLOBALS['theme_key'] : variable_get('theme_default', 'bartik');
+  $own = bootstrap_native_update_preview_theme();
+  $build = $own && $own['theme'] === $theme ? $own['build'] : bootstrap_native_update_build_for_theme($theme, bootstrap_native_update_preview());
   $builds = bootstrap_native_update_builds();
   if ($build !== '' && !empty($builds[$build]['meta'])) {
     $uri = bootstrap_native_update_build_uri($build);
@@ -244,6 +243,21 @@ function bootstrap_native_update_preview() {
   $build = $_SESSION['bootstrap_native_update_preview'];
   $builds = variable_get('bootstrap_native_update_builds', array());
   return !empty($builds[$build]['meta']) ? $build : NULL;
+}
+
+/**
+ * A theme's own parts this admin is previewing (from its settings page).
+ *
+ * @return array|null
+ *   Keys theme, build; or NULL.
+ */
+function bootstrap_native_update_preview_theme() {
+  if (empty($_SESSION['bootstrap_native_update_preview_theme']['build']) || !user_access('administer bootstrap native updates')) {
+    return NULL;
+  }
+  $preview = $_SESSION['bootstrap_native_update_preview_theme'];
+  $builds = variable_get('bootstrap_native_update_builds', array());
+  return is_string($preview['build']) && !empty($builds[$preview['build']]['meta']) ? $preview : NULL;
 }
 
 /**
@@ -300,8 +314,14 @@ function bootstrap_native_update_css_alter(&$css) {
  * The preview bar, for the admin previewing a release.
  */
 function bootstrap_native_update_page_build(&$page) {
+  $own = bootstrap_native_update_preview_theme();
+  if ($own && $own['theme'] === $GLOBALS['theme_key']) {
+    module_load_include('inc', 'bootstrap_native_update', 'includes/admin');
+    $page['page_top']['bootstrap_native_update_preview'] = bootstrap_native_update_preview_bar($own['build'], $own['theme']);
+    return;
+  }
   $build = bootstrap_native_update_preview();
-  if ($build === NULL || path_is_admin(current_path()) && current_path() != 'admin/appearance/bootstrap-updates') {
+  if ($build === NULL || path_is_admin(current_path()) && current_path() != 'admin/appearance/bootstrap-updates' && empty(bootstrap_native_update_builds_for_preview($build)[$GLOBALS['theme_key']])) {
     return;
   }
   module_load_include('inc', 'bootstrap_native_update', 'includes/admin');
@@ -309,9 +329,19 @@ function bootstrap_native_update_page_build(&$page) {
 }
 
 /**
+ * The theme builds a previewed release brings (admin pages show the bar
+ * too when their theme has one).
+ */
+function bootstrap_native_update_builds_for_preview($build) {
+  $builds = variable_get('bootstrap_native_update_builds', array());
+  return isset($builds[$build]['theme_builds']) ? $builds[$build]['theme_builds'] : array();
+}
+
+/**
  * Implements hook_form_FORM_ID_alter() for system_theme_settings().
  *
- * A notice on the settings of Bootstrap Native and its sub-themes.
+ * On the settings of Bootstrap Native and its sub-themes: a notice when a
+ * new release is out, and the theme's Bootstrap components (step 6).
  */
 function bootstrap_native_update_form_system_theme_settings_alter(&$form, &$form_state) {
   $theme = isset($form_state['build_info']['args'][0]) ? $form_state['build_info']['args'][0] : '';
@@ -319,6 +349,10 @@ function bootstrap_native_update_form_system_theme_settings_alter(&$form, &$form
     return;
   }
   module_load_include('inc', 'bootstrap_native_update', 'includes/releases');
+  module_load_include('inc', 'bootstrap_native_update', 'includes/theme_parts');
+  // AJAX rebuilds (the color preview) load the form from cache.
+  $form_state['build_info']['files']['bootstrap_native_update'] = drupal_get_path('module', 'bootstrap_native_update') . '/includes/theme_parts.inc';
+  bootstrap_native_update_theme_parts_step($form, $form_state, $theme);
   if ($release = bootstrap_native_update_available()) {
     $form['bootstrap_native_update_notice'] = array(
       '#type' => 'container',
@@ -345,6 +379,26 @@ function bootstrap_native_update_cron() {
     bootstrap_native_update_refresh_releases();
   }
   bootstrap_native_update_cleanup();
+}
+
+/**
+ * Implements hook_themes_enabled().
+ *
+ * A theme with fixed parts (the admin theme) gets its build right away.
+ */
+function bootstrap_native_update_themes_enabled($theme_list) {
+  module_load_include('inc', 'bootstrap_native_update', 'includes/releases');
+  list_themes(TRUE);
+  bootstrap_native_update_rebuild_theme_builds();
+}
+
+/**
+ * Implements hook_themes_disabled().
+ */
+function bootstrap_native_update_themes_disabled($theme_list) {
+  module_load_include('inc', 'bootstrap_native_update', 'includes/releases');
+  list_themes(TRUE);
+  bootstrap_native_update_rebuild_theme_builds();
 }
 
 /**

@@ -71,6 +71,10 @@ ok($result['rows'][2]['code'] == 'color_property' && $result['rows'][2]['status'
 $new['css_menus'] = 3;
 $result = bootstrap_native_update_run_checks($old, $new, array(), array());
 ok($result['rows'][1]['code'] == 'menu_rename' && $result['verdict'] == 'breaks', 'checks: menu rename falling short is Breaks');
+$few = $old;
+$few['css_menus'] = 3;
+$same = bootstrap_native_update_run_checks($few, $new, array(), array());
+ok($same['rows'][1]['code'] == 'menu_ok', 'checks: a build that never had many menus (no dropdown part) is not short of them');
 $result = bootstrap_native_update_run_checks($old, array('css' => NULL, 'error' => 'Undefined mixin'), array(), array());
 ok($result['verdict'] == 'failed' && count($result['rows']) == 1, 'checks: a failed build stops the checks');
 $result = bootstrap_native_update_run_checks($old, $old, array('bootstrap_native' => $dir), array('--bs-link-color'));

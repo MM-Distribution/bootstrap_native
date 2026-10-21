@@ -16,6 +16,9 @@
   margin: 0 0 0.6em;
 }
 .bnu-table {
+  /* Positioned, so hidden header text (element-invisible is absolute)
+     stays inside the scrolling box instead of widening the page. */
+  position: relative;
   overflow-x: auto;
   margin: 0 0 1em;
 }
@@ -342,4 +345,83 @@
 .bnu-preview a:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 2px;
+}
+
+/* Parts per theme: badges, the locked note of fixed parts, the difference
+   from the site-wide choice, links to each theme's results. */
+.bnu-badge-site {
+  background: #e8f1f8;
+  color: #0b4a75;
+}
+.bnu-badge-own {
+  background: #fff1d6;
+  color: #6e4400;
+}
+.bnu-badge-fixed {
+  background: #eee;
+  color: #3a3a3a;
+}
+.bnu-badge-passed {
+  background: #e6f4ea;
+  color: #1e6b0f;
+}
+.bnu-note-own {
+  font-size: 0.85em;
+  color: #6e4400;
+}
+.bnu-locked {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #f3f4f6;
+}
+.bnu-locked svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.bnu-diff {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #fff6e0;
+  color: #6e4400;
+  font-size: 0.9em;
+}
+.bnu-diff .bnu-link {
+  margin-left: 4px;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.bnu-theme-chips {
+  margin: 0 0 1em;
+}
+.bnu-chip {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 4px 12px;
+  border: 1px solid #ddd;
+  border-radius: 16px;
+  text-decoration: none;
+}
+/* A theme's own parts on its settings page: the long list scrolls in its
+   own box, so the step stays a sensible height. */
+#bn-step-components .bnu-table {
+  max-height: 32rem;
+  overflow: auto;
+  border: 1px solid #dfe2e6;
+  border-radius: 6px;
+}
+.bnu-theme-result h2 .bnu-badge {
+  font-size: 0.55em;
+  vertical-align: middle;
+}
+.bnu-details > summary {
+  min-height: 2.25rem;
+  cursor: pointer;
+  color: #0074bd;
 }
