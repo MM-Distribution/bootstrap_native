@@ -11,10 +11,10 @@
 # (default: a temporary folder, printed at the end).
 set -e
 DIR="$(cd "$(dirname "$0")" && pwd)"
-export DRUPAL_ROOT="${DRUPAL_ROOT:-$HOME/public_html/s/claude.dev}"
+export DRUPAL_ROOT="${DRUPAL_ROOT:-$HOME/public_html/dev/claude.dev}"
 export BASE="${BASE:-https://claude.dev.asphaltsealcoatingdirect.com}"
 case "$DRUPAL_ROOT ${BASE:-}" in
-  *public_html/h/*|*//asphaltsealcoatingdirect.com*|*//www.asphaltsealcoatingdirect.com*)
+  *public_html/live/*|*public_html/h/*|*//asphaltsealcoatingdirect.com*|*//www.asphaltsealcoatingdirect.com*)
     echo "Refusing to run tests against the live site ($DRUPAL_ROOT ${BASE:-})." >&2; exit 1 ;;
 esac
 PHP="${PHP:-$(command -v php84 || echo /opt/cpanel/ea-php84/root/usr/bin/php)}"
