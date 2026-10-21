@@ -2,7 +2,7 @@
 # Runs all the tests.
 #
 #   tests/run.sh          everything: unit tests, theme pages, Bootstrap updates
-#   tests/run.sh colors   only the plain-PHP tests (color math, build, checks)
+#   tests/run.sh colors   only the plain-PHP tests (color math, SVG, build, checks)
 #   tests/run.sh pages    plain-PHP tests and the theme's pages
 #   tests/run.sh update   plain-PHP tests and the Bootstrap updates (with
 #                         test releases; leaves the site on the shipped one)
@@ -23,6 +23,8 @@ status=0
 
 echo "== Colors"
 "$PHP" -d log_errors=0 "$DIR/color_test.php" || status=1
+echo "== SVG cleaning"
+"$PHP" -d log_errors=0 "$DIR/svg_test.php" || status=1
 echo "== Build and checks"
 "$PHP" -d log_errors=0 "$DIR/checks_test.php" || status=1
 export PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH:-/opt/playwright/browsers}"

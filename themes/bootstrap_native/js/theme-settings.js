@@ -1,7 +1,8 @@
 /**
  * @file
  * Theme settings: color fields (picker, Set / Automatic), the preview's
- * sample switch and phone view, the save bar.
+ * sample switch and phone view, the save bar (unsaved changes, Discard
+ * changes, Reset with Undo; Reset and Discard act in the page only).
  *
  * The text field is what gets saved (a hex value, a Bootstrap color name,
  * or empty = automatic); the picker only fills it in. A change updates the
@@ -16,6 +17,9 @@
   var view = 'page';
   var dirty = false;
   var submitting = false;
+  // The fields as saved (when the page loaded), and before the last Reset.
+  var saved = null;
+  var beforeReset = null;
   // One column (the preview behind a button) when the form is narrow: the
   // stylesheet's container query; here, the same width of the form.
   function isNarrow(form) {
@@ -44,14 +48,99 @@
     }
   }
 
-  function markDirty() {
-    if (dirty) {
+  // The step fields that are saved (not the file uploads, nor the color
+  // pickers: they only follow the text fields).
+  function fields() {
+    return $('form.bn-settings-form .bn-steps').find('input, select, textarea').not('[type=file], [type=hidden], [type=button], [type=submit], .bn-picker');
+  }
+  function checkable(el) {
+    return el.type === 'checkbox' || el.type === 'radio';
+  }
+  function snapshot($els) {
+    var list = [];
+    $els.each(function () {
+      list.push([this, checkable(this) ? this.checked : $(this).val()]);
+    });
+    return list;
+  }
+  function differs(list) {
+    for (var i = 0; i < list.length; i++) {
+      if ((checkable(list[i][0]) ? list[i][0].checked : $(list[i][0]).val()) !== list[i][1]) {
+        return true;
+      }
+    }
+    return false;
+  }
+  // Puts fields back, then updates the color rows and the preview (one
+  // color field's AJAX sends the whole form).
+  function restore(list) {
+    var $colors = $([]);
+    $.each(list, function (i, item) {
+      if (checkable(item[0])) {
+        item[0].checked = item[1];
+      }
+      else {
+        $(item[0]).val(item[1]);
+      }
+      if ($(item[0]).hasClass('bootstrap-native-color')) {
+        $colors = $colors.add(item[0]);
+      }
+    });
+    refreshColors($colors);
+  }
+  function refreshColors($colors) {
+    $colors.each(function () {
+      $(this).closest('.bn-color').removeClass('is-editing');
+      var sync = $(this).data('bnSync');
+      if (sync) {
+        sync();
+      }
+    });
+    $colors.eq(0).trigger('change');
+  }
+
+  // Unsaved changes: anything different from what's saved (a change undone
+  // by hand counts as saved again).
+  function updateState() {
+    if (!saved) {
       return;
     }
-    dirty = true;
+    dirty = differs(saved) || $('form.bn-settings-form .bn-steps input[type=file]').filter(function () {
+      return this.value !== '';
+    }).length > 0;
     $('.bn-unsaved').each(function () {
-      $(this).text($(this).attr('data-unsaved')).addClass('is-unsaved');
+      $(this).text($(this).attr(dirty ? 'data-unsaved' : 'data-saved')).toggleClass('is-unsaved', dirty);
     });
+    // Right after a Reset its own line and Undo say it all.
+    if (beforeReset) {
+      $('.bn-unsaved').attr('hidden', 'hidden');
+    }
+    else {
+      $('.bn-unsaved').removeAttr('hidden');
+    }
+    if (dirty && !beforeReset) {
+      $('.bn-discard').removeAttr('hidden');
+    }
+    else {
+      $('.bn-discard').attr('hidden', 'hidden');
+    }
+  }
+  function markDirty() {
+    // After the value that changed is in place.
+    setTimeout(updateState, 0);
+  }
+
+  function showReset(done) {
+    if (done) {
+      $('.bn-reset-status').text($('.bn-reset-status').attr('data-text'));
+      $('.bn-undo').removeAttr('hidden');
+      $('input.bn-reset').attr('hidden', 'hidden');
+    }
+    else {
+      $('.bn-reset-status').text('');
+      $('.bn-undo').attr('hidden', 'hidden');
+      $('input.bn-reset').removeAttr('hidden');
+    }
   }
 
   // A color field: the row with picker, field and the Set / Automatic button.
@@ -182,6 +271,8 @@
           });
         }
         $form.find('.bn-steps').find('input, select, textarea').not('.bootstrap-native-color').bind('change', markDirty);
+        saved = snapshot(fields());
+        updateState();
         $form.bind('submit', function () {
           submitting = true;
           // Drupal's AJAX disables a field while its preview update runs,
@@ -189,12 +280,35 @@
           // Save at once would save it empty.
           $(this).find('input.bootstrap-native-color').removeAttr('disabled').removeClass('progress-disabled');
         });
+        // Reset: empties the six colors in the page; Save keeps it, Undo
+        // (or Discard changes, or leaving) puts them back.
         $form.find('input.bn-reset').bind('click', function (e) {
-          if (!window.confirm($(this).attr('data-confirm'))) {
-            e.preventDefault();
-            return false;
+          e.preventDefault();
+          var $colors = $form.find('input.bootstrap-native-color');
+          beforeReset = snapshot($colors);
+          $colors.val('');
+          refreshColors($colors);
+          showReset(true);
+          updateState();
+          $form.find('.bn-undo').focus();
+          return false;
+        });
+        $form.find('.bn-undo').bind('click', function () {
+          if (beforeReset) {
+            restore(beforeReset);
+            beforeReset = null;
           }
-          submitting = true;
+          showReset(false);
+          updateState();
+          $form.find('input.bn-reset').focus();
+        });
+        $form.find('.bn-discard').bind('click', function () {
+          $form.find('.bn-steps input[type=file]').val('');
+          restore(saved);
+          beforeReset = null;
+          showReset(false);
+          updateState();
+          $form.find('.bn-savebar .form-submit').eq(0).focus();
         });
         $(document).bind('keydown', function (e) {
           if (e.keyCode === 27 && $('.bn-preview-pane').hasClass('is-open')) {

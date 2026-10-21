@@ -48,6 +48,7 @@ should port to Backdrop CMS later: plain Drupal 7 APIs, no Composer.
       components.inc   Bootstrap components page, measuring parts, built-files download
       sass.inc         installing Dart Sass (drush only)
       subtheme.inc     sub-theme generator; subtheme_form.inc is its page
+      svg.inc          cleans uploaded SVG logos and browser icons (plain PHP)
     css/, js/          the module's admin pages
     starterkit/        what a new sub-theme starts from (STARTERKIT is replaced)
     themes/bootstrap_native/

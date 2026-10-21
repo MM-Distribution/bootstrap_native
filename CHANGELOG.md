@@ -66,3 +66,11 @@
   with no link colors they keep Bootstrap's greys. Tests: the update tests
   use a new fixture folder each run and send `no-store`, so a caching proxy
   in front of the site can't serve removed fixtures.
+- 2026-10-21: Theme settings: "Reset to Bootstrap's colors" only empties
+  the six color fields (nothing saved, no question) and offers Undo; the
+  save bar has "Discard changes" while anything is unsaved (a change undone
+  by hand counts as saved). Without JavaScript, Reset shows the form again
+  with the colors empty. SVG logos (and SVG browser icons, which core took
+  as uploaded) are cleaned on upload by `includes/svg.inc`: SVG elements on
+  a list, no event attributes or scripts, links only within the file, no
+  styles that load anything; files with entities are refused.

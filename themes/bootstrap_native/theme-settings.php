@@ -31,6 +31,12 @@ function bootstrap_native_form_system_theme_settings_alter(&$form, &$form_state,
   $path = drupal_get_path('theme', 'bootstrap_native');
   bootstrap_native_color_load_palette();
 
+  // SVG logos and icons are cleaned before core's checks (which refuse an
+  // SVG logo, and keep an SVG icon as uploaded). This runs inside core's
+  // form builder, before Drupal adds system_theme_settings_validate() to an
+  // unset #validate; set here, it has to be listed too.
+  $validate = isset($form['#validate']) ? $form['#validate'] : array('system_theme_settings_validate');
+  $form['#validate'] = array_merge(array('bootstrap_native_settings_svg_validate'), $validate);
   $form['#attributes']['class'][] = 'bn-settings-form';
   $form['#attached']['css'][] = $path . '/css/theme-settings.css';
   $form['#attached']['js'][] = $path . '/js/theme-settings.js';
@@ -100,15 +106,24 @@ function bootstrap_native_form_system_theme_settings_alter(&$form, &$form_state,
   $form['bn_preview_view'] = array('#type' => 'hidden', '#value' => $view, '#attributes' => array('class' => array('bn-preview-view')));
   $form['bn_settings']['preview'] = bootstrap_native_settings_preview_pane($values, $tokens, $view);
 
-  // The save bar: Save, whether anything changed, Preview (phones), and
-  // Reset at the far end. Core adds its Save button to $form['actions']
-  // after this alter (system_settings_form()), so the bar is made here.
+  // The save bar: Save, whether anything changed, Discard changes, Preview
+  // (phones), and Reset at the far end; after a Reset, what it did and
+  // Undo. Core adds its Save button to $form['actions'] after this alter
+  // (system_settings_form()), so the bar is made here.
   $form['actions']['#type'] = 'actions';
   $form['actions']['#attributes']['class'][] = 'bn-savebar';
   $form['actions']['#weight'] = 100;
   $form['actions']['unsaved'] = array(
     '#markup' => '<span class="bn-unsaved" aria-live="polite" data-saved="' . t('All changes saved') . '" data-unsaved="' . t('Unsaved changes') . '">' . t('All changes saved') . '</span>',
     '#weight' => 10,
+  );
+  $form['actions']['discard'] = array(
+    '#markup' => '<button type="button" class="bn-link bn-discard" hidden>' . t('Discard changes') . '</button>',
+    '#weight' => 12,
+  );
+  $form['actions']['reset_status'] = array(
+    '#markup' => '<span class="bn-reset-status" role="status" data-text="' . t("Colors cleared to Bootstrap's own, not saved yet.") . '"></span><button type="button" class="bn-link bn-undo" hidden>' . t('Undo') . '</button>',
+    '#weight' => 13,
   );
   $form['actions']['preview_open'] = array(
     '#markup' => '<button type="button" class="bn-preview-open">' . t('Preview') . '</button>',
@@ -119,7 +134,7 @@ function bootstrap_native_form_system_theme_settings_alter(&$form, &$form_state,
     '#value' => t("Reset to Bootstrap's colors"),
     '#submit' => array('bootstrap_native_color_reset_submit'),
     '#limit_validation_errors' => array(),
-    '#attributes' => array('class' => array('bn-reset'), 'data-confirm' => t("Clear all six colors and go back to Bootstrap's own? The logo and header settings stay.")),
+    '#attributes' => array('class' => array('bn-reset')),
     '#weight' => 20,
   );
 }
@@ -266,7 +281,7 @@ function bootstrap_native_settings_logo(&$form, $theme) {
   );
   $element['fields']['logo_upload'] = $form['logo']['settings']['logo_upload'];
   $element['fields']['logo_upload']['#title'] = t('Logo');
-  $element['fields']['logo_upload']['#description'] = t('Shown in the header. PNG, JPG or GIF, about 200 × 60 px (twice that for sharp screens).');
+  $element['fields']['logo_upload']['#description'] = t('Shown in the header. SVG, PNG, JPG or GIF, about 200 × 60 px. An SVG is cleaned when uploaded (scripts and links that run code are taken out).');
   if ($logo) {
     $element['fields']['bn_logo_remove'] = array(
       '#type' => 'checkbox',
@@ -286,6 +301,36 @@ function bootstrap_native_settings_logo(&$form, $theme) {
   $element['fields']['default_logo']['#access'] = FALSE;
   unset($form['logo']);
   return $element;
+}
+
+/**
+ * Form validation: an uploaded SVG logo or browser icon is cleaned first.
+ *
+ * The upload's temporary file is rewritten with the cleaned SVG and saved
+ * here; core's own check of the same upload then gets this file (Drupal
+ * keeps one result per upload). A file that can't be cleaned is refused
+ * before core sees it.
+ */
+function bootstrap_native_settings_svg_validate($form, &$form_state) {
+  foreach (array('logo_upload' => t('logo'), 'favicon_upload' => t('browser icon')) as $field => $label) {
+    $name = isset($_FILES['files']['name'][$field]) ? $_FILES['files']['name'][$field] : '';
+    $tmp = isset($_FILES['files']['tmp_name'][$field]) ? $_FILES['files']['tmp_name'][$field] : '';
+    if ($name === '' || strtolower(pathinfo($name, PATHINFO_EXTENSION)) != 'svg' || !$tmp || !is_uploaded_file($tmp)) {
+      continue;
+    }
+    module_load_include('inc', 'bootstrap_native_update', 'includes/svg');
+    $clean = function_exists('bootstrap_native_update_svg_clean') ? bootstrap_native_update_svg_clean(file_get_contents($tmp)) : FALSE;
+    if ($clean === FALSE || file_put_contents($tmp, $clean) === FALSE) {
+      unset($_FILES['files']['name'][$field]);
+      form_set_error($field, t('The @what could not be used: it is not an SVG file that can be read safely. Save it again from your drawing program as plain SVG, or use a PNG.', array('@what' => $label)));
+      continue;
+    }
+    clearstatcache(TRUE, $tmp);
+    $_FILES['files']['size'][$field] = strlen($clean);
+    if (!file_save_upload($field, array('file_validate_extensions' => array('svg')))) {
+      unset($_FILES['files']['name'][$field]);
+    }
+  }
 }
 
 /**
@@ -449,16 +494,17 @@ function bootstrap_native_color_preview_ajax($form, $form_state) {
 }
 
 /**
- * Form submit: Reset to Bootstrap's colors (the six colors only).
+ * Form submit: Reset to Bootstrap's colors, without JavaScript.
+ *
+ * Empties the six color fields and shows the form again; nothing is saved
+ * until Save (the script does the same in the page, with Undo).
  */
 function bootstrap_native_color_reset_submit($form, &$form_state) {
-  $theme = $form_state['build_info']['args'][0];
-  $settings = variable_get('theme_' . $theme . '_settings', array());
   foreach (array_keys(bootstrap_native_color_fields()) as $key) {
-    $settings['bootstrap_native_color_' . $key] = '';
+    $form_state['input']['bootstrap_native_color_' . $key] = '';
   }
-  variable_set('theme_' . $theme . '_settings', $settings);
-  drupal_set_message(t("The colors are back to Bootstrap's own."));
+  $form_state['rebuild'] = TRUE;
+  drupal_set_message(t("Colors cleared to Bootstrap's own, not saved yet. Save keeps it; leaving the page puts them back."));
 }
 
 /**

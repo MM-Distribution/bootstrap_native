@@ -197,14 +197,88 @@ with sync_playwright() as p:
     page.click('input[value="Save configuration"]')
     page.wait_for_load_state()
     ok(page.input_value('input[name="bootstrap_native_color_primary"]') == '#123456', 'settings: a color typed just before Save is saved')
-    page.once('dialog', lambda d: d.dismiss())
+    colors = ['primary', 'secondary', 'base', 'text', 'link', 'link_hover']
+    def color(key):
+        return page.input_value('input[name="bootstrap_native_color_%s"]' % key)
+    def shown(sel):
+        return page.locator(sel).first.is_visible()
+    # Discard changes: only with unsaved changes; puts every field back.
+    ok(not shown('.bn-discard'), 'settings: no Discard changes while nothing changed')
+    slogan = page.locator('input[name="toggle_slogan"]')
+    slogan_was = slogan.is_checked()
+    page.fill('input[name="bootstrap_native_color_primary"]', '#654321')
+    page.locator('input[name="bootstrap_native_color_primary"]').dispatch_event('change')
+    slogan.click(force=True)
+    page.wait_for_timeout(100)
+    ok(shown('.bn-discard') and page.inner_text('.bn-unsaved') == 'Unsaved changes', 'settings: changes show Discard changes')
+    page.click('.bn-discard')
+    page.wait_for_timeout(100)
+    ok(color('primary') == '#123456' and slogan.is_checked() == slogan_was, 'settings: Discard changes puts the fields back')
+    ok(not shown('.bn-discard') and page.inner_text('.bn-unsaved') == 'All changes saved', 'settings: and nothing is unsaved after it')
+    # Reset: empties the six colors in the page, no question asked; Undo
+    # puts them back; only Save keeps it.
+    dialogs = []
+    def on_dialog(d):
+        dialogs.append(d.type)
+        d.dismiss()
+    page.on('dialog', on_dialog)
     page.click('input.bn-reset')
-    page.wait_for_timeout(300)
-    ok(page.input_value('input[name="bootstrap_native_color_secondary"]') == 'indigo-600', 'settings: reset asks first (cancelled: nothing changed)')
-    page.once('dialog', lambda d: d.accept())
+    page.wait_for_timeout(100)
+    ok(all(color(k) == '' for k in colors) and not dialogs, 'settings: Reset empties the six colors without asking')
+    ok("Colors cleared to Bootstrap's own, not saved yet." in page.inner_text('.bn-reset-status') and shown('.bn-undo') and not shown('input.bn-reset'), 'settings: Reset says nothing is saved yet, with Undo')
+    try:
+        page.wait_for_function("(() => { const f = document.querySelector('#bootstrap-native-preview iframe'); return f && f.contentDocument && f.contentDocument.documentElement && !f.contentDocument.documentElement.outerHTML.includes('#5d31cb'); })()", timeout=10000)
+        cleared = True
+    except Exception:
+        cleared = False
+    ok(cleared, "settings: the preview shows Bootstrap's colors after Reset")
+    page.click('.bn-undo')
+    page.wait_for_timeout(100)
+    ok(color('primary') == '#123456' and color('secondary') == 'indigo-600' and shown('input.bn-reset') and not shown('.bn-undo') and page.inner_text('.bn-unsaved') == 'All changes saved', 'settings: Undo puts the colors back')
     page.click('input.bn-reset')
+    page.wait_for_timeout(100)
+    ok(not shown('.bn-discard') and not shown('.bn-unsaved'), 'settings: after Reset the bar shows only Save, what Reset did, and Undo')
+    page.click('input[value="Save configuration"]')
     page.wait_for_load_state()
-    ok(page.get_by_text("The colors are back to Bootstrap's own.").count() == 1 and page.input_value('input[name="bootstrap_native_color_primary"]') == '', 'settings: reset clears the colors')
+    page.remove_listener('dialog', on_dialog)
+    ok(color('primary') == '' and color('secondary') == '' and not dialogs, 'settings: Reset, then Save, clears the colors')
+    # Without JavaScript, Reset shows the form again with the colors empty;
+    # nothing is saved.
+    page.locator('.bn-color[data-key="primary"] .bn-mode').click()
+    page.fill('input[name="bootstrap_native_color_primary"]', '#123456')
+    page.click('input[value="Save configuration"]')
+    page.wait_for_load_state()
+    nojs = browser.new_context(java_script_enabled=False, storage_state=context.storage_state())
+    plain = nojs.new_page()
+    plain.goto(base + '/admin/appearance/settings/' + os.environ.get('THEME', 'bootstrap_native'))
+    plain.click('input.bn-reset')
+    plain.wait_for_load_state()
+    ok(plain.input_value('input[name="bootstrap_native_color_primary"]') == '' and plain.get_by_text("Colors cleared to Bootstrap's own, not saved yet.", exact=False).count() >= 1, 'settings: without JavaScript, Reset empties the colors in the form')
+    plain.goto(base + '/admin/appearance/settings/' + os.environ.get('THEME', 'bootstrap_native'))
+    ok(plain.input_value('input[name="bootstrap_native_color_primary"]') == '#123456', 'settings: ...and saves nothing')
+    nojs.close()
+    # SVG logos: cleaned on upload; one that can't be read safely is refused.
+    svg_dir = os.path.join(out, 'svg')
+    os.makedirs(svg_dir, exist_ok=True)
+    with open(os.path.join(svg_dir, 'bnu-test-logo.svg'), 'w') as f:
+        f.write('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" onload="alert(1)"><script>alert(2)</script><rect width="200" height="60" rx="8" fill="#1d3557"/><text x="100" y="40" fill="#f19c21" font-size="28" text-anchor="middle">LOGO</text></svg>')
+    with open(os.path.join(svg_dir, 'bnu-test-bad.svg'), 'w') as f:
+        f.write('<?xml version="1.0"?><!DOCTYPE svg [<!ENTITY x SYSTEM "file:///etc/passwd">]><svg xmlns="http://www.w3.org/2000/svg">&x;</svg>')
+    page.set_input_files('input[name="files[logo_upload]"]', os.path.join(svg_dir, 'bnu-test-bad.svg'))
+    page.click('input[value="Save configuration"]')
+    page.wait_for_load_state()
+    ok(page.locator('.messages.error').count() == 1 and 'can be read safely' in page.inner_text('.messages.error'), 'settings: an SVG with entities is refused')
+    page.set_input_files('input[name="files[logo_upload]"]', os.path.join(svg_dir, 'bnu-test-logo.svg'))
+    page.click('input[value="Save configuration"]')
+    page.wait_for_load_state()
+    ok(page.locator('.messages.error').count() == 0 and page.locator('.bn-logo-current img[src*="bnu-test-logo"]').count() == 1, 'settings: an SVG logo is taken')
+    logo_url = page.locator('.bn-logo-current img').get_attribute('src')
+    body = page.request.get(logo_url).text()
+    ok('<rect' in body and 'script' not in body and 'onload' not in body and 'alert' not in body, 'settings: the saved SVG has its drawing, no script or onload')
+    visitor.goto(base + '/user/login')
+    box = visitor.locator('.navbar-brand img').bounding_box()
+    ok(box is not None and box['height'] > 20 and box['width'] > 60, 'settings: the SVG logo shows in the header (%s)' % (box and '%dx%d' % (box['width'], box['height'])))
+    visitor.screenshot(path=out + '/12-svg-logo.png')
     page.set_viewport_size({'width': 390, 'height': 844})
     page.goto(base + '/admin/appearance/settings/' + os.environ.get('THEME', 'bootstrap_native'))
     width = page.evaluate('document.documentElement.scrollWidth')

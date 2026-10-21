@@ -34,6 +34,7 @@ cleanup() {
   EV "bootstrap_native_update_activate(''); foreach (array_keys(bootstrap_native_update_builds()) as \$b) bootstrap_native_update_discard_build(\$b); foreach (array_keys(bootstrap_native_update_versions()) as \$v) bootstrap_native_update_discard_release(\$v); foreach (array('registry', 'fallback', 'needs_build', 'last_build', 'selection', 'previous', 'part_info') as \$k) variable_del('bootstrap_native_update_' . \$k); variable_set('bootstrap_native_update_releases', array());" >/dev/null
   D ev "theme_disable(array('$SUB')); variable_del('theme_${SUB}_settings'); db_delete('system')->condition('name', array('$SUB', 'bnu_ui_sub'))->execute(); variable_del('theme_bnu_ui_sub_settings');" >/dev/null 2>&1
   /bin/rm -rf "${DRUPAL_ROOT:?}/sites/all/themes/$SUB" "${DRUPAL_ROOT:?}/sites/all/themes/bnu_ui_sub" "${DRUPAL_ROOT:?}/${FIX:?}"
+  /bin/rm -f "${DRUPAL_ROOT:?}/${FILES:?}"/bnu-test-logo*.svg
   sed -i '/^\/\/ bnu-test$/d' "$DIR/themes/bootstrap_native/scss/_layout.scss"
   D cc all >/dev/null 2>&1
 }

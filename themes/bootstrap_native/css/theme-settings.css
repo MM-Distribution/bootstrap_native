@@ -323,7 +323,32 @@ body.toolbar-drawer .bn-preview-pane {
   border-radius: 50%;
   background: #c27c00;
 }
-/* Reset: a link at the far end, away from Save. */
+/* Reset: a link at the far end, away from Save; Discard changes and Undo
+   look like links too (they act in the page, nothing is sent). */
+.bn-savebar [hidden] {
+  display: none !important;
+}
+.bn-savebar .bn-link {
+  min-height: 2.75rem;
+  padding: 0 .25rem;
+  border: 0;
+  background: none;
+  color: #0a58ca;
+  text-decoration: underline;
+  font: inherit;
+  font-size: .9em;
+  cursor: pointer;
+}
+.bn-savebar .bn-undo {
+  font-weight: 600;
+}
+.bn-reset-status {
+  font-size: .85em;
+  color: #6e4400;
+}
+.bn-reset-status:empty {
+  display: none;
+}
 .bn-savebar input.bn-reset {
   margin-left: auto;
   padding: 0;
