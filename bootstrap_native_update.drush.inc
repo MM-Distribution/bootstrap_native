@@ -133,7 +133,7 @@ function drush_bootstrap_native_update_bootstrap_native_check($version = NULL) {
   if (!isset($releases[$version])) {
     return drush_set_error('BOOTSTRAP_NATIVE_CHECK', dt('!version is not a known Bootstrap 6 release.', array('!version' => $version)));
   }
-  if ($version === bootstrap_native_update_active()) {
+  if ($version === bootstrap_native_update_active_version()) {
     return drush_set_error('BOOTSTRAP_NATIVE_CHECK', dt('The site runs !version.', array('!version' => $version)));
   }
   foreach (bootstrap_native_update_check_steps() as $step => $label) {
@@ -142,8 +142,9 @@ function drush_bootstrap_native_update_bootstrap_native_check($version = NULL) {
     }
     drush_print(' ' . $label);
   }
-  $versions = bootstrap_native_update_versions();
-  $result = $versions[$version]['check'];
+  $builds = bootstrap_native_update_builds();
+  $build = variable_get('bootstrap_native_update_last_build', '');
+  $result = $builds[$build]['check'];
   $rows = array();
   foreach ($result['rows'] as $row) {
     $text = bootstrap_native_update_row_text($row);
@@ -151,6 +152,7 @@ function drush_bootstrap_native_update_bootstrap_native_check($version = NULL) {
     $rows[] = array($row['status'], $text['check'], html_entity_decode(strip_tags($detail . ($text['where'] ? ' (' . $text['where'] . ')' : '')), ENT_QUOTES));
   }
   drush_print_table($rows);
+  drush_print(dt('Build: !build', array('!build' => $build)));
   drush_print(dt('Verdict: !verdict', array('!verdict' => $result['verdict'])));
 }
 

@@ -64,17 +64,35 @@ function bootstrap_native_preprocess_html(&$variables) {
   ), 'bootstrap_native_viewport');
 
   // Bootstrap 6's JavaScript is an ES module (no jQuery). drupal_add_js()
-  // can't write type="module", so it goes in the head as a tag; module
-  // scripts never block the page. It becomes window.bootstrap, announced
-  // by the bootstrap-native:ready event. The Bootstrap updates page may
-  // have switched the site to a newer build.
+  // can't write type="module", so it goes in the head as tags; module
+  // scripts never block the page. An import map names it "bootstrap", so
+  // plugins can import it; it becomes window.bootstrap, announced by the
+  // bootstrap-native:ready event. The Bootstrap updates page may have
+  // switched the site to another build, and sub-themes may bring plugins
+  // (bootstrap_native[js][] in their .info).
   $files = function_exists('bootstrap_native_update_files') ? bootstrap_native_update_files() : NULL;
   $bundle = $files ? $files['js'] : file_create_url($theme_path . '/js/bootstrap.bundle.min.js') . '?' . variable_get('css_js_query_string', '0');
   drupal_add_html_head(array(
     '#tag' => 'script',
+    '#attributes' => array('type' => 'importmap'),
+    '#value' => drupal_json_encode(array('imports' => array('bootstrap' => $bundle))),
+    '#weight' => 100,
+  ), 'bootstrap_native_importmap');
+  drupal_add_html_head(array(
+    '#tag' => 'script',
     '#attributes' => array('type' => 'module'),
-    '#value' => 'import(' . drupal_json_encode($bundle) . ').then(function (b) { window.bootstrap = b; document.dispatchEvent(new CustomEvent("bootstrap-native:ready", {detail: b})); });',
+    '#value' => 'import("bootstrap").then(function (b) { window.bootstrap = b; document.dispatchEvent(new CustomEvent("bootstrap-native:ready", {detail: b})); });',
+    '#weight' => 101,
   ), 'bootstrap_native_bootstrap');
+  $plugins = function_exists('bootstrap_native_update_theme_scripts') ? bootstrap_native_update_theme_scripts($GLOBALS['theme_key']) : array();
+  foreach ($plugins as $i => $url) {
+    drupal_add_html_head(array(
+      '#tag' => 'script',
+      '#attributes' => array('type' => 'module', 'src' => $url),
+      '#value' => '',
+      '#weight' => 102 + $i,
+    ), 'bootstrap_native_plugin_' . $i);
+  }
 }
 
 /**

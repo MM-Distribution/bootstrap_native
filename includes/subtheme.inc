@@ -16,7 +16,7 @@
  * @return array
  *   Problems (empty when it can be created).
  */
-function bootstrap_native_update_subtheme_problems($machine, $name, $parent) {
+function bootstrap_native_update_subtheme_problems($machine, $name, $parent, $check_folder = TRUE) {
   $problems = array();
   if (!preg_match('/^[a-z][a-z0-9_]{1,31}$/', $machine)) {
     $problems[] = t('The machine name must be 2 to 32 characters: lowercase letters, digits and underscores, starting with a letter.');
@@ -31,7 +31,7 @@ function bootstrap_native_update_subtheme_problems($machine, $name, $parent) {
   if (!preg_match('#^sites/[^/]+/themes$#', $parent)) {
     $problems[] = t('Sub-themes go in sites/all/themes or sites/<site>/themes.');
   }
-  elseif (!$problems && file_exists(DRUPAL_ROOT . '/' . $parent . '/' . $machine)) {
+  elseif ($check_folder && !$problems && file_exists(DRUPAL_ROOT . '/' . $parent . '/' . $machine)) {
     $problems[] = t('@path already exists.', array('@path' => $parent . '/' . $machine));
   }
   return $problems;
@@ -66,13 +66,41 @@ function bootstrap_native_update_subtheme_create($machine, $name, $parent = 'sit
   }
   $name = bootstrap_native_update_subtheme_clean_name($name);
   $path = $parent . '/' . $machine;
-  $target = DRUPAL_ROOT . '/' . $path;
-  $kit = DRUPAL_ROOT . '/' . drupal_get_path('module', 'bootstrap_native_update') . '/starterkit';
-
-  if (!is_dir(DRUPAL_ROOT . '/' . $parent) && !@mkdir(DRUPAL_ROOT . '/' . $parent, 0755, TRUE) || !@mkdir($target, 0755)) {
-    return array('path' => '', 'problems' => array(t('@path could not be created (permissions?).', array('@path' => $path))));
+  if (!is_dir(DRUPAL_ROOT . '/' . $parent) && !@mkdir(DRUPAL_ROOT . '/' . $parent, 0755, TRUE)) {
+    return array('path' => '', 'problems' => array(t('@path could not be created (permissions?).', array('@path' => $parent))));
+  }
+  if ($problem = bootstrap_native_update_subtheme_write($machine, $name, DRUPAL_ROOT . '/' . $path)) {
+    return array('path' => '', 'problems' => array($problem));
   }
 
+  // Same look from the start: Bootstrap Native's settings (colors, logo).
+  $settings = variable_get('theme_bootstrap_native_settings', array());
+  if ($settings) {
+    variable_set('theme_' . $machine . '_settings', $settings);
+  }
+  watchdog('bootstrap_native', 'Created the sub-theme @name (@path).', array('@name' => $name, '@path' => $path));
+  return array('path' => $path, 'problems' => array());
+}
+
+/**
+ * Writes a sub-theme's files into a new folder.
+ *
+ * @param string $machine
+ *   Machine name (already checked).
+ * @param string $name
+ *   Human name.
+ * @param string $target
+ *   The folder to create (absolute; it must not exist).
+ *
+ * @return string
+ *   '' when written, else the problem (nothing is left behind).
+ */
+function bootstrap_native_update_subtheme_write($machine, $name, $target) {
+  $name = bootstrap_native_update_subtheme_clean_name($name);
+  $kit = DRUPAL_ROOT . '/' . drupal_get_path('module', 'bootstrap_native_update') . '/starterkit';
+  if (file_exists($target) || !@mkdir($target, 0755, TRUE)) {
+    return t('The folder for @machine could not be created (it exists, or permissions).', array('@machine' => $machine));
+  }
   $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($kit, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::SELF_FIRST);
   foreach ($files as $file) {
     $relative = str_replace('STARTERKIT', $machine, substr($file->getPathname(), strlen($kit) + 1));
@@ -86,18 +114,11 @@ function bootstrap_native_update_subtheme_create($machine, $name, $parent = 'sit
     ));
     if (file_put_contents($target . '/' . $relative, $text) === FALSE) {
       file_unmanaged_delete_recursive($target);
-      return array('path' => '', 'problems' => array(t('@file could not be written.', array('@file' => $path . '/' . $relative))));
+      return t('@file could not be written.', array('@file' => $relative));
     }
   }
   file_put_contents($target . '/' . $machine . '.info', bootstrap_native_update_subtheme_info($machine, $name));
-
-  // Same look from the start: Bootstrap Native's settings (colors, logo).
-  $settings = variable_get('theme_bootstrap_native_settings', array());
-  if ($settings) {
-    variable_set('theme_' . $machine . '_settings', $settings);
-  }
-  watchdog('bootstrap_native', 'Created the sub-theme @name (@path).', array('@name' => $name, '@path' => $path));
-  return array('path' => $path, 'problems' => array());
+  return '';
 }
 
 /**
@@ -128,5 +149,12 @@ function bootstrap_native_update_subtheme_info($machine, $name) {
   $lines[] = '; Colors are set on the theme settings page (they start as Bootstrap';
   $lines[] = "; Native's at the time this theme was created).";
   $lines[] = 'settings[default_logo] = 0';
+  $lines[] = '';
+  $lines[] = "; Bootstrap parts this theme needs (always built in; Appearance > Bootstrap";
+  $lines[] = '; components lists them), Sass modules built in after Bootstrap, and';
+  $lines[] = '; plugins (ES modules) loaded after its script. Uncomment to use:';
+  $lines[] = '; bootstrap_native[parts][] = carousel';
+  $lines[] = '; bootstrap_native[sass][] = scss/_' . $machine . '.scss';
+  $lines[] = '; bootstrap_native[js][] = js/' . $machine . '.js';
   return implode("\n", $lines) . "\n";
 }

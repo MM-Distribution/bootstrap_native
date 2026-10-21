@@ -13,7 +13,8 @@ so the module can't be disabled while the theme or a sub-theme of it is
 enabled.
 
     bootstrap_native_update.*   the module (and its drush commands)
-    includes/                   the module's code (build.inc: the build)
+    includes/                   the module's code (build.inc: the build,
+                                parts.inc: Bootstrap's parts)
     themes/bootstrap_native/    the theme
     starterkit/                 what a new sub-theme starts from
     build/                      developer build
@@ -46,8 +47,11 @@ someone presses a button.
    theme ships with is never removed and is always the fallback.
 
 Where things live: downloads in `public://bootstrap-native/releases/`,
-builds in `public://bootstrap-native/builds/` (per site, always writable);
-state in `bootstrap_native_update_*` variables.
+builds in `public://bootstrap-native/builds/<version>~<parts>/` (per site,
+always writable); state in `bootstrap_native_update_*` variables. A build
+is a release with a choice of parts: `~default` is the theme's own choice,
+anything else a hash of the choice. The release the theme ships with,
+with its own parts, is the theme's prebuilt files and needs no build.
 
 **After a code update** (git pull, then clearing caches) the active
 release is rebuilt against the new theme code; if that can't be done, the
@@ -55,6 +59,49 @@ site goes back to the shipped release and the status report says why.
 
 **Settings:** offer pre-releases (on while Bootstrap 6 has no stable
 release), check daily from cron (off by default), Sass compiler path.
+
+## Bootstrap components
+
+Appearance > Bootstrap components: which of Bootstrap's parts (Sass
+modules) the site's stylesheet includes.
+
+- **The list comes from each release:** its `scss/bootstrap.scss` (the
+  `@forward` stack, folders expanded) and the utility groups Bootstrap
+  marks in `_utilities.scss`. A new release brings its own parts.
+- **States:** required (the theme's Drupal rules `@use` them, plus
+  Bootstrap's variables and reboot), clashes with Drupal (locked off: the
+  theme's `bootstrap_native[exclude]` in its .info), needed by a sub-theme,
+  used in a template (a part's own classes found in a theme's files), or
+  optional.
+- **Sizes and docs** are measured once per release (each part built on
+  its own; one request to getbootstrap.com, whose sidebar lists every docs
+  page). The Docs column links to a part's page; no page found, no link.
+- **Build and check** builds the active release with the choice and runs
+  the update checks; then preview, apply, roll back as for an update.
+  *Reset to the theme's defaults* goes back to `scss/_bootstrap-parts.scss`.
+- **Download the built files** gives the active stylesheet and script as a
+  .tar.gz.
+- Scripts are one bundle (every plugin); the page lists them from the
+  bundle's exports.
+
+The build writes a generated entry (Bootstrap's parts in Bootstrap's order,
+a partial that removes left-out utility groups from `$utilities`, add-ons,
+then `scss/_drupal.scss`). The theme's default choice builds byte for byte
+the stylesheet the theme ships.
+
+### What a sub-theme can add
+
+In its .info (the generated one has these commented out):
+
+    bootstrap_native[parts][] = carousel           ; a Bootstrap part it needs
+    bootstrap_native[sass][] = scss/_extras.scss   ; a Sass module, after Bootstrap
+    bootstrap_native[js][] = js/plugin.js          ; an ES module, after Bootstrap's script
+
+After a cache clear the site's build is redone to include them (needs the
+compiler; the status report says when it can't). Scripts load through an
+import map, so a plugin can `import { Tooltip } from "bootstrap"`. Paths
+must stay inside the sub-theme. Add-ons from other packages (npm) will use
+the same build entry and import map; their page comes once there are any.
 
 ### Sass compiler
 
@@ -78,14 +125,17 @@ download a program they would later run.
 
     drush bootstrap-native-subtheme mysite --name="My Site" [--enable|--default] [--path=sites/all/themes]
 
+Or Appearance > *Create a Bootstrap Native sub-theme* (permission:
+*Create Bootstrap Native sub-themes*), which can also give the files as a
+.tar.gz instead of writing them.
+
 Creates `sites/all/themes/mysite` from `starterkit/`: a stylesheet loaded
 after Bootstrap Native's (unlayered, so its rules win over Bootstrap's), an
 empty `template.php`, `templates/`. Regions and features are copied from
 Bootstrap Native (a D7 sub-theme doesn't inherit them), so are its theme
 settings (colors, logo). The machine name is checked
 (`[a-z][a-z0-9_]{1,31}`, not taken, folder not there); the human name is
-cleaned to one line of plain text. Permission for the (coming) web version:
-*Create Bootstrap Native sub-themes*.
+cleaned to one line of plain text and never goes into PHP.
 
 ## Why
 
@@ -185,7 +235,8 @@ They leave the site on the shipped release.
 ## Status and next steps
 
 7.x-1.0-dev, being built on clauded7 (2026-10-20). Done: Bootstrap updates
-page, drush commands for the compiler and sub-themes. Theme: forms, fieldsets,
+and components pages, sub-theme generator (page and drush), the compiler
+drush command. Theme: forms, fieldsets,
 vertical tabs, messages, tabs, breadcrumb, pager, tables, menus, navbar
 with a phone drawer, page layout (columns follow the sidebars that have
 blocks), color settings with preview.
@@ -198,4 +249,6 @@ Next:
 - Paragraphs: spacing between paragraph items, bundle templates.
 - Ubercart pages (catalog, product attributes).
 - Trim the stylesheet (Bootstrap's full utility set is most of its size).
-- Web page for creating a sub-theme (mockup first).
+- The add-ons page (npm lookup) once Bootstrap 6 add-ons exist.
+- Single plugins instead of the bundle (needs Floating UI and Vanilla
+  Calendar pinned too).

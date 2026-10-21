@@ -146,23 +146,22 @@ function bootstrap_native_update_sass_on_path() {
  *   The Dart Sass program.
  * @param string $entry
  *   The theme's scss/bootstrap_native.scss.
- * @param string $load_path
- *   The folder holding bootstrap/scss (the theme's vendor/, or a release).
+ * @param string|array $load_paths
+ *   The folder holding bootstrap/scss (the theme's vendor/, or a release),
+ *   then any others (the theme's scss/ for a generated entry, add-ons).
  * @param bool $dev
  *   Readable output instead of compressed.
  *
  * @return array
  *   Keys: css (NULL on failure), error, seconds.
  */
-function bootstrap_native_update_compile($sass, $entry, $load_path, $dev = FALSE) {
-  $run = bootstrap_native_update_run(array(
-    $sass,
-    '--no-source-map',
-    '--style=' . ($dev ? 'expanded' : 'compressed'),
-    '--quiet-deps',
-    '--load-path=' . $load_path,
-    $entry,
-  ), BOOTSTRAP_NATIVE_UPDATE_SASS_TIMEOUT);
+function bootstrap_native_update_compile($sass, $entry, $load_paths, $dev = FALSE) {
+  $command = array($sass, '--no-source-map', '--style=' . ($dev ? 'expanded' : 'compressed'), '--quiet-deps');
+  foreach ((array) $load_paths as $path) {
+    $command[] = '--load-path=' . $path;
+  }
+  $command[] = $entry;
+  $run = bootstrap_native_update_run($command, BOOTSTRAP_NATIVE_UPDATE_SASS_TIMEOUT);
   $error = '';
   if ($run['timed_out']) {
     $error = 'Sass took longer than ' . BOOTSTRAP_NATIVE_UPDATE_SASS_TIMEOUT . ' seconds and was stopped.';
@@ -211,19 +210,38 @@ function bootstrap_native_update_postprocess_js($js) {
  *   The Dart Sass program.
  * @param string $theme_dir
  *   The theme's folder.
- * @param string $release_dir
- *   The folder holding bootstrap/ (scss/ and dist/js/).
+ * @param string|array $load_paths
+ *   The folder holding the release's bootstrap/ (scss/ and dist/js/), then
+ *   any others a generated entry needs (in the order Sass should look).
  * @param bool $dev
  *   Readable CSS instead of compressed.
+ * @param string $entry
+ *   The Sass entry; default: the theme's scss/bootstrap_native.scss.
  *
  * @return array
  *   Keys: css, js (NULL on failure), error, seconds, properties,
  *   css_menus, js_menus, undefined (custom properties used but defined
  *   nowhere).
  */
-function bootstrap_native_update_build($sass, $theme_dir, $release_dir, $dev = FALSE) {
+function bootstrap_native_update_build($sass, $theme_dir, $load_paths, $dev = FALSE, $entry = NULL) {
   $build = array('css' => NULL, 'js' => NULL, 'error' => '', 'seconds' => 0, 'properties' => 0, 'css_menus' => 0, 'js_menus' => 0, 'undefined' => array());
-  $compiled = bootstrap_native_update_compile($sass, $theme_dir . '/scss/bootstrap_native.scss', $release_dir, $dev);
+  $load_paths = (array) $load_paths;
+  $release_dir = NULL;
+  foreach ($load_paths as $path) {
+    if (is_dir($path . '/bootstrap/scss')) {
+      $release_dir = $path;
+      break;
+    }
+  }
+  if ($release_dir === NULL) {
+    $build['error'] = 'No Bootstrap release on the load path.';
+    return $build;
+  }
+  if ($entry === NULL) {
+    $entry = $theme_dir . '/scss/bootstrap_native.scss';
+    $load_paths[] = $theme_dir . '/scss';
+  }
+  $compiled = bootstrap_native_update_compile($sass, $entry, $load_paths, $dev);
   $build['seconds'] = $compiled['seconds'];
   if ($compiled['css'] === NULL) {
     $build['error'] = $compiled['error'];

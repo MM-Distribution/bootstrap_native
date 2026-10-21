@@ -9,6 +9,7 @@
 $module = dirname(__DIR__);
 require $module . '/includes/build.inc';
 require $module . '/includes/checks.inc';
+require $module . '/includes/parts.inc';
 
 $failures = 0;
 
@@ -108,6 +109,42 @@ ok($run['status'] === 3 && trim($run['stdout']) == 'out' && trim($run['stderr'])
 $run = bootstrap_native_update_run(array('/bin/sleep', '5'), 1);
 ok($run['timed_out'] && $run['seconds'] < 3, 'run: stopped at the timeout');
 ok(bootstrap_native_update_sass_version('/bin/echo') === NULL, 'sass version: a program that is not Sass');
+
+// Parts (against the shipped release).
+$theme = $module . '/themes/bootstrap_native';
+$scss = $theme . '/vendor/bootstrap/scss';
+$parts = bootstrap_native_update_release_parts($scss);
+ok(isset($parts['accordion'], $parts['forms/otp-input'], $parts['utilities/api'], $parts['content/reboot']) && !isset($parts['banner']) && !isset($parts['forms']), 'parts: from bootstrap.scss, folders expanded, banner left out');
+ok($parts['forms/otp-input'] == 'forms' && $parts['accordion'] == 'components' && $parts['content/reboot'] == 'base', 'parts: groups');
+$groups = bootstrap_native_update_utility_groups($scss);
+ok(isset($groups['margin']) && in_array('margin-x', $groups['margin']) && count($groups) > 40, 'utility groups: from the scss-docs markers');
+$required = bootstrap_native_update_required_parts($theme, $scss);
+ok(in_array('alert', $required) && in_array('buttons/button', $required) && in_array('forms/form-control', $required) && !in_array('accordion', $required), "required: the parts the theme's partials use, folders expanded");
+$default = bootstrap_native_update_default_selection($theme, $scss);
+$context = array('parts' => $parts, 'utility_groups' => $groups, 'default' => $default, 'required' => $required, 'needed' => array('carousel'), 'exclude' => array('placeholder' => 'x'));
+$effective = bootstrap_native_update_effective_selection(array('parts' => array('placeholder', 'stepper'), 'utilities' => array('margin', 'nope')), $context);
+ok(in_array('alert', $effective['parts']) && in_array('carousel', $effective['parts']) && in_array('stepper', $effective['parts']) && !in_array('placeholder', $effective['parts']), 'effective: required and needed in, excluded out');
+ok($effective['utilities'] == array('margin'), 'effective: unknown utility groups dropped');
+ok(array_search('config', $effective['parts']) < array_search('alert', $effective['parts']) && array_search('alert', $effective['parts']) < array_search('stepper', $effective['parts']), "effective: in Bootstrap's order");
+$default_effective = bootstrap_native_update_effective_selection(NULL, array('needed' => array()) + $context);
+ok(bootstrap_native_update_selection_key($default_effective, $default_effective) == 'default' && preg_match('/^[0-9a-f]{8}$/', bootstrap_native_update_selection_key($effective, $default_effective)), 'selection key: default, else a hash');
+ok(bootstrap_native_update_selection_key($default_effective, $default_effective, array('/x/_extras.scss')) != 'default', 'selection key: extra Sass makes its own build');
+$files = bootstrap_native_update_entry_files($effective, $groups, array('bnu-extra-0'));
+$entry = $files['bootstrap_native.scss'];
+ok(isset($files['_bnu-utilities.scss']) && strpos($files['_bnu-utilities.scss'], '"padding"') !== FALSE && strpos($files['_bnu-utilities.scss'], '"margin"') === FALSE, 'entry: utility groups left out are removed from the map');
+ok(strpos($entry, '@use "bnu-utilities"') < strpos($entry, '@use "bootstrap/scss/utilities/api"') && strpos($entry, '@use "bnu-extra-0"') < strpos($entry, '@use "drupal";'), 'entry: filter before the API, add-ons before the Drupal rules');
+$all = bootstrap_native_update_entry_files($default_effective, $groups);
+ok(!isset($all['_bnu-utilities.scss']), 'entry: no filter when every group is in');
+
+// Docs pages.
+$pages = bootstrap_native_update_docs_pages('<a href="/docs/6.0/forms/otp-input">x</a><a href="/docs/6.0/forms/datepicker/">x</a><a href="/docs/6.0/utilities/text-wrapping">x</a><a href="/docs/6.0/helpers/vertical-rule">x</a><a href="/docs/5.3/forms/checks-radios">old</a><a href="/docs/6.0/forms/checkbox">x</a>', '6.0');
+ok(count($pages) == 5, 'docs: pages of this version only');
+ok(bootstrap_native_update_docs_page('forms/otp-input', $pages) == 'forms/otp-input', 'docs: same name');
+ok(bootstrap_native_update_docs_page('datepicker', $pages) == 'forms/datepicker', 'docs: found in another section');
+ok(bootstrap_native_update_docs_page('utilities:text-wrap', $pages) == 'utilities/text-wrapping', 'docs: close name');
+ok(bootstrap_native_update_docs_page('forms/check', $pages) == 'forms/checkbox', 'docs: close name (check, checkbox)');
+ok(bootstrap_native_update_docs_page('helpers/vr', $pages) == 'helpers/vertical-rule', 'docs: alias');
+ok(bootstrap_native_update_docs_page('carousel', $pages) === '', 'docs: none found, no link');
 
 exec('rm -rf ' . escapeshellarg($dir));
 echo $failures ? "$failures failed\n" : "all passed\n";

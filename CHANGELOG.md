@@ -25,3 +25,12 @@
   (from `starterkit/`). The theme loads Bootstrap's script inline as a
   module import (the loader file is gone). Tests: checks_test.php,
   update_test.sh with test releases, update_ui.py.
+- 2026-10-20: Bootstrap components (Appearance > Bootstrap components):
+  choose Bootstrap's parts and utility groups (read from each release),
+  with sizes and docs links, built and checked like an update; download of
+  the built files. Builds are now a release plus a choice of parts
+  (`<version>~<parts>`). Sub-themes can add parts, Sass modules and ES
+  module plugins in their .info; scripts load through an import map.
+  Create a sub-theme from Appearance (or as a .tar.gz). The theme's SCSS
+  entry is split into `_bootstrap-parts.scss` and `_drupal.scss` (same
+  output).

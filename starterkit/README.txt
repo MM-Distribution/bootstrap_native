@@ -8,6 +8,15 @@ A sub-theme of Bootstrap Native, created by
 - template.php: preprocess hooks and theme functions (STARTERKIT_...).
 - templates/: template overrides.
 
+Bootstrap's parts, Sass and plugins: see the end of STARTERKIT.info.
+- bootstrap_native[parts][] adds a Bootstrap part to the site's build.
+- bootstrap_native[sass][] builds a Sass module of this theme in after
+  Bootstrap (it can @use "bootstrap/scss/..." and Bootstrap's variables).
+- bootstrap_native[js][] loads an ES module after Bootstrap's script; it can
+  import Bootstrap by name: import { Tooltip } from "bootstrap".
+Changing them needs a cache clear (the build is redone then) and a Sass
+compiler (drush bootstrap-native-sass --install).
+
 Regions and features were copied from Bootstrap Native when this theme was
 created (a sub-theme in Drupal 7 doesn't inherit them); keep them in step if
 Bootstrap Native adds a region.

@@ -35,3 +35,10 @@ settings[bootstrap_native_color_base] = ''
 settings[bootstrap_native_color_text] = ''
 settings[bootstrap_native_color_link] = ''
 settings[bootstrap_native_color_link_hover] = ''
+
+; Bootstrap parts the theme never builds: Drupal uses the same class names
+; for other things (shown on Appearance > Bootstrap components).
+bootstrap_native[exclude][placeholder] = "Drupal's <em class=\"placeholder\"> in messages uses the same class"
+bootstrap_native[exclude][progress] = "Drupal's progress bar (batch, uploads) uses the same class; the theme styles Drupal's"
+bootstrap_native[exclude][forms/form-text] = ".form-text is Drupal's text input; help text is Drupal's .description"
+bootstrap_native[exclude][forms/floating-labels] = "Needs its own markup (a wrapper and a placeholder on every field); the Floating Labels module does this on Drupal's"

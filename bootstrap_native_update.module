@@ -71,6 +71,18 @@ function bootstrap_native_update_permission() {
 }
 
 /**
+ * Implements hook_theme().
+ */
+function bootstrap_native_update_theme() {
+  return array(
+    'bootstrap_native_update_components_table' => array(
+      'render element' => 'element',
+      'file' => 'includes/components.inc',
+    ),
+  );
+}
+
+/**
  * Implements hook_menu().
  */
 function bootstrap_native_update_menu() {
@@ -91,6 +103,23 @@ function bootstrap_native_update_menu() {
     'page callback' => 'bootstrap_native_update_result_page',
     'page arguments' => array(4),
   ) + $base;
+  $items['admin/appearance/bootstrap-components'] = array(
+    'title' => 'Bootstrap components',
+    'description' => "Choose which of Bootstrap's parts the site's stylesheet includes.",
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('bootstrap_native_update_components_form'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 6,
+    'file' => 'includes/components.inc',
+  ) + $base;
+  $items['admin/appearance/bootstrap-native-subtheme'] = array(
+    'title' => 'Create a Bootstrap Native sub-theme',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('bootstrap_native_update_subtheme_form'),
+    'access arguments' => array('create bootstrap native sub-themes'),
+    'type' => MENU_LOCAL_ACTION,
+    'file' => 'includes/subtheme_form.inc',
+  );
   // One-click actions; each takes a token (no request forgery).
   $items['admin/appearance/bootstrap-updates/action/%/%'] = array(
     'page callback' => 'bootstrap_native_update_action',
@@ -103,11 +132,11 @@ function bootstrap_native_update_menu() {
 /**
  * The files the page should use, or NULL for the theme's own.
  *
- * The release being previewed (only for the admin previewing it), else the
- * active release.
+ * The build being previewed (only for the admin previewing it), else the
+ * active build.
  *
  * @return array|null
- *   Keys version, css (path from the Drupal root), js (URL).
+ *   Keys build, css (path from the Drupal root), js (URL).
  */
 function bootstrap_native_update_files() {
   $files = &drupal_static(__FUNCTION__, FALSE);
@@ -116,33 +145,64 @@ function bootstrap_native_update_files() {
   }
   module_load_include('inc', 'bootstrap_native_update', 'includes/releases');
   $files = NULL;
-  $version = bootstrap_native_update_preview();
-  if ($version === NULL) {
-    $version = bootstrap_native_update_active();
+  $build = bootstrap_native_update_preview();
+  if ($build === NULL) {
+    $build = bootstrap_native_update_active();
   }
-  $versions = bootstrap_native_update_versions();
-  if ($version !== '' && !empty($versions[$version]['build'])) {
-    $uri = bootstrap_native_update_build_uri($version);
-    $stamp = $versions[$version]['build']['stamp'];
+  $builds = bootstrap_native_update_builds();
+  if ($build !== '' && !empty($builds[$build]['meta'])) {
+    $uri = bootstrap_native_update_build_uri($build);
     $files = array(
-      'version' => $version,
-      'css' => file_stream_wrapper_get_instance_by_uri($uri)->getDirectoryPath() . '/bootstrap-native/builds/' . $version . '/bootstrap_native.css',
-      'js' => file_create_url($uri . '/bootstrap.bundle.min.js') . '?' . $stamp,
+      'build' => $build,
+      'css' => file_stream_wrapper_get_instance_by_uri($uri)->getDirectoryPath() . '/bootstrap-native/builds/' . $build . '/bootstrap_native.css',
+      'js' => file_create_url($uri . '/bootstrap.bundle.min.js') . '?' . $builds[$build]['meta']['stamp'],
     );
   }
   return $files;
 }
 
 /**
- * The release this admin is previewing, or NULL.
+ * The build this admin is previewing, or NULL.
  */
 function bootstrap_native_update_preview() {
   if (empty($_SESSION['bootstrap_native_update_preview']) || !user_access('administer bootstrap native updates')) {
     return NULL;
   }
-  $version = $_SESSION['bootstrap_native_update_preview'];
-  $versions = variable_get('bootstrap_native_update_versions', array());
-  return !empty($versions[$version]['build']) ? $version : NULL;
+  $build = $_SESSION['bootstrap_native_update_preview'];
+  $builds = variable_get('bootstrap_native_update_builds', array());
+  return !empty($builds[$build]['meta']) ? $build : NULL;
+}
+
+/**
+ * Scripts (ES modules) the active theme and its base themes bring.
+ *
+ * In a sub-theme's .info: bootstrap_native[js][] = js/plugin.js. They load
+ * after Bootstrap's script and can import it by name:
+ * import { BaseComponent } from "bootstrap".
+ *
+ * @return array
+ *   URLs.
+ */
+function bootstrap_native_update_theme_scripts($theme_key) {
+  $themes = list_themes();
+  if (!isset($themes[$theme_key])) {
+    return array();
+  }
+  $chain = array_reverse(array_keys(drupal_find_base_themes($themes, $theme_key)));
+  $chain[] = $theme_key;
+  $urls = array();
+  foreach (array_reverse($chain) as $name) {
+    if (empty($themes[$name]->info['bootstrap_native']['js'])) {
+      continue;
+    }
+    foreach ((array) $themes[$name]->info['bootstrap_native']['js'] as $file) {
+      $path = dirname($themes[$name]->filename) . '/' . $file;
+      if (strpos($file, '..') === FALSE && preg_match('/\.m?js$/', $file) && is_file(DRUPAL_ROOT . '/' . $path)) {
+        $urls[] = file_create_url($path) . '?' . variable_get('css_js_query_string', '0');
+      }
+    }
+  }
+  return $urls;
 }
 
 /**
@@ -167,12 +227,12 @@ function bootstrap_native_update_css_alter(&$css) {
  * The preview bar, for the admin previewing a release.
  */
 function bootstrap_native_update_page_build(&$page) {
-  $version = bootstrap_native_update_preview();
-  if ($version === NULL || path_is_admin(current_path()) && current_path() != 'admin/appearance/bootstrap-updates') {
+  $build = bootstrap_native_update_preview();
+  if ($build === NULL || path_is_admin(current_path()) && current_path() != 'admin/appearance/bootstrap-updates') {
     return;
   }
   module_load_include('inc', 'bootstrap_native_update', 'includes/admin');
-  $page['page_top']['bootstrap_native_update_preview'] = bootstrap_native_update_preview_bar($version);
+  $page['page_top']['bootstrap_native_update_preview'] = bootstrap_native_update_preview_bar($build);
 }
 
 /**

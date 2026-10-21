@@ -173,6 +173,78 @@
   margin-top: 0.5em;
 }
 
+/* Bootstrap components. */
+.bnu-intro {
+  max-width: 780px;
+}
+.bnu-parts tr.bnu-group td {
+  background: #fafafa;
+  font-weight: 700;
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #595959;
+}
+.bnu-parts .bnu-check-cell {
+  width: 44px;
+}
+.bnu-parts .bnu-check-cell .form-item {
+  margin: 0;
+  padding: 0;
+}
+.bnu-parts .bnu-size {
+  width: 80px;
+  white-space: nowrap;
+  color: #595959;
+}
+.bnu-parts .bnu-docs-cell {
+  width: 56px;
+  text-align: center;
+}
+.bnu-docs {
+  display: inline-flex;
+  padding: 4px;
+  border-radius: 3px;
+  color: #0074bd;
+}
+.bnu-docs:hover {
+  background: #e8f1f8;
+}
+.bnu-docs:focus-visible {
+  outline: 2px solid #0074bd;
+  outline-offset: 1px;
+}
+.bnu-badge-required {
+  background: #e8f1f8;
+  color: #0b4a75;
+}
+.bnu-badge-off {
+  background: #eee;
+  color: #595959;
+}
+.bnu-badge-needed {
+  background: #f1f8ec;
+  color: #1e4a0f;
+}
+.bnu-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.bnu-size-summary {
+  border-top: 1px solid #eee;
+  padding-top: 12px;
+}
+.bnu-components .form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+}
+.bnu-download {
+  margin-left: auto;
+}
+
 /* Progress page of a check. */
 .bnu-steps {
   list-style: none;

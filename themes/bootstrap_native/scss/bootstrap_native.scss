@@ -3,68 +3,11 @@
 // folder) into css/bootstrap_native.css; custom properties get Bootstrap's
 // --bs- prefix there.
 //
-// Left out because Drupal uses the same class names for other things:
-// - placeholder: Drupal's <em class="placeholder"> in messages.
-// - progress: Drupal's progress bar (batch, uploads); styled in _drupal-ui.
-// - forms/form-text: Bootstrap's help text; .form-text is Drupal's text
-//   input (help text is Drupal's .description).
-// - floating-labels: the floating_labels module does that.
 // Renamed at build: .menu (Bootstrap's dropdown) becomes .bs-menu, since
 // every Drupal menu is a ul.menu.
 //
 // "bootstrap/" comes from the load path: the theme's vendor/ folder, or a
 // downloaded release on the Bootstrap updates page.
 
-@use "bootstrap/scss/config";
-@use "bootstrap/scss/colors";
-@use "bootstrap/scss/theme";
-@use "bootstrap/scss/root";
-
-@use "bootstrap/scss/content/reboot";
-@use "bootstrap/scss/content/lists";
-@use "bootstrap/scss/content/blockquote";
-@use "bootstrap/scss/content/tables";
-@use "bootstrap/scss/content/images";
-@use "bootstrap/scss/content/prose";
-@use "bootstrap/scss/layout";
-
-@use "bootstrap/scss/forms/labels";
-@use "bootstrap/scss/forms/form-control";
-@use "bootstrap/scss/forms/check";
-@use "bootstrap/scss/forms/radio";
-@use "bootstrap/scss/forms/switch";
-@use "bootstrap/scss/forms/form-range";
-@use "bootstrap/scss/forms/input-group";
-@use "bootstrap/scss/forms/form-adorn";
-@use "bootstrap/scss/forms/form-field";
-@use "bootstrap/scss/forms/validation";
-@use "bootstrap/scss/buttons";
-
-@use "bootstrap/scss/accordion";
-@use "bootstrap/scss/alert";
-@use "bootstrap/scss/badge";
-@use "bootstrap/scss/breadcrumb";
-@use "bootstrap/scss/card";
-@use "bootstrap/scss/dialog";
-@use "bootstrap/scss/menu";
-@use "bootstrap/scss/list-group";
-@use "bootstrap/scss/nav";
-@use "bootstrap/scss/navbar";
-@use "bootstrap/scss/drawer";
-@use "bootstrap/scss/pagination";
-@use "bootstrap/scss/popover";
-@use "bootstrap/scss/spinner";
-@use "bootstrap/scss/toasts";
-@use "bootstrap/scss/tooltip";
-@use "bootstrap/scss/transitions";
-
-@use "bootstrap/scss/helpers";
-@use "bootstrap/scss/utilities/api";
-
-// Drupal's markup on top (layer "custom": after Bootstrap's components,
-// before its helpers and utilities, so utility classes still win; module
-// stylesheets are unlayered, so they win over all of it).
-@use "drupal-forms";
-@use "drupal-ui";
-@use "drupal-content";
-@use "layout" as page-layout;
+@use "bootstrap-parts";
+@use "drupal";
