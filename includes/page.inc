@@ -11,10 +11,10 @@
  * @return array
  *   Keys primary, secondary, base, text, link, link_hover: hex or ''.
  */
-function bs_native_color_settings($theme = NULL) {
+function bootstrap_native_color_settings($theme = NULL) {
   $settings = array();
   foreach (array('primary', 'secondary', 'base', 'text', 'link', 'link_hover') as $key) {
-    $settings[$key] = (string) theme_get_setting('bs_native_color_' . $key, $theme);
+    $settings[$key] = (string) theme_get_setting('bootstrap_native_color_' . $key, $theme);
   }
   return $settings;
 }
@@ -25,7 +25,7 @@ function bs_native_color_settings($theme = NULL) {
  * Drops core's look-only stylesheets; the theme styles the same markup
  * (system.base.css stays: it holds what core's JavaScript needs).
  */
-function bs_native_css_alter(&$css) {
+function bootstrap_native_css_alter(&$css) {
   foreach (array('modules/system/system.theme.css', 'modules/system/system.menus.css', 'modules/system/system.messages.css', 'misc/vertical-tabs.css') as $file) {
     unset($css[$file]);
   }
@@ -34,13 +34,13 @@ function bs_native_css_alter(&$css) {
 /**
  * Implements hook_preprocess_html().
  */
-function bs_native_preprocess_html(&$variables) {
-  $theme_path = drupal_get_path('theme', 'bs_native');
+function bootstrap_native_preprocess_html(&$variables) {
+  $theme_path = drupal_get_path('theme', 'bootstrap_native');
 
   // Colors from the theme settings: Bootstrap's variables, after its CSS.
-  $tokens = bs_native_color_tokens(bs_native_color_settings());
+  $tokens = bootstrap_native_color_tokens(bootstrap_native_color_settings());
   if ($tokens['vars']) {
-    drupal_add_css(bs_native_color_css($tokens), array(
+    drupal_add_css(bootstrap_native_color_css($tokens), array(
       'type' => 'inline',
       'group' => CSS_THEME,
       'weight' => 1000,
@@ -61,7 +61,7 @@ function bs_native_preprocess_html(&$variables) {
       'name' => 'viewport',
       'content' => 'width=device-width, initial-scale=1',
     ),
-  ), 'bs_native_viewport');
+  ), 'bootstrap_native_viewport');
 
   // Bootstrap 6's JavaScript is an ES module (no jQuery). drupal_add_js()
   // can't write type="module", so it goes in the head as a tag; module
@@ -71,23 +71,23 @@ function bs_native_preprocess_html(&$variables) {
     '#tag' => 'script',
     '#attributes' => array(
       'type' => 'module',
-      'src' => file_create_url($theme_path . '/js/bs_native.js') . $query,
+      'src' => file_create_url($theme_path . '/js/bootstrap_native.js') . $query,
     ),
     '#value' => '',
-  ), 'bs_native_bootstrap');
+  ), 'bootstrap_native_bootstrap');
 }
 
 /**
  * Implements hook_process_html().
  */
-function bs_native_process_html(&$variables) {
+function bootstrap_native_process_html(&$variables) {
   $variables['html_attributes'] = drupal_attributes($variables['html_attributes_array']);
 }
 
 /**
  * Implements hook_preprocess_page().
  */
-function bs_native_preprocess_page(&$variables) {
+function bootstrap_native_preprocess_page(&$variables) {
   // Main and secondary menus as Bootstrap navbar links.
   foreach (array('main_menu' => 'system_main_menu', 'secondary_menu' => 'system_secondary_menu') as $key => $hook) {
     $variables[$key . '_nav'] = '';

@@ -4,7 +4,7 @@
  * @file
  * The page: navbar header, content with optional sidebars, footer.
  *
- * Variables as in core's page.tpl.php, plus (bs_native_preprocess_page()):
+ * Variables as in core's page.tpl.php, plus (bootstrap_native_preprocess_page()):
  * - $main_menu_nav, $secondary_menu_nav: the menus as navbar links.
  * - $has_navbar_drawer: whether there is anything for the navbar's menu
  *   (it becomes a drawer on narrow screens, inline from "lg" up).

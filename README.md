@@ -55,7 +55,7 @@ all optional (empty = Bootstrap's own). The theme works out the rest in
 
 ## Building
 
-The compiled `css/bs_native.css` and `js/bootstrap.bundle.min.js` are in
+The compiled `css/bootstrap_native.css` and `js/bootstrap.bundle.min.js` are in
 the repository; sites need no build tools. To change the SCSS or update
 Bootstrap:
 
@@ -73,7 +73,7 @@ bundle, LICENSE). Needs Chrome/Edge 130+, Firefox 132+, Safari/iOS 18+.
 
 Bootstrap's JavaScript is an ES module: loaded with `<script type="module">`
 (D7's `drupal_add_js()` can't), exposed as `window.bootstrap` after the
-`bs-native:ready` event. Core's jQuery stays for Drupal's own scripts.
+`bootstrap-native:ready` event. Core's jQuery stays for Drupal's own scripts.
 
 ## Tests
 

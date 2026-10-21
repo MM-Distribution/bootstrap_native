@@ -48,7 +48,7 @@ with sync_playwright() as p:
                 errors.append('scrolls sideways by %dpx' % sideways)
             # Module scripts run after parsing; give Bootstrap a moment.
             bootstrap = page.evaluate('''() => window.bootstrap ? 'object' : new Promise(done => {
-                document.addEventListener('bs-native:ready', () => done('object'));
+                document.addEventListener('bootstrap-native:ready', () => done('object'));
                 setTimeout(() => done(typeof window.bootstrap), 3000);
             })''')
             if bootstrap != 'object':

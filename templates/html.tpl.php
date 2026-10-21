@@ -6,7 +6,7 @@
  *
  * Differences from core:
  * - $html_attributes: lang, dir and data-bs-theme (Bootstrap's light or
- *   dark scheme, from the base color setting; see bs_native_preprocess_html()).
+ *   dark scheme, from the base color setting; see bootstrap_native_preprocess_html()).
  * - HTML5 doctype; RDF namespaces kept for modules that read them.
  */
 ?><!DOCTYPE html>

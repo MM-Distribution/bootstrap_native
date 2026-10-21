@@ -3,17 +3,17 @@
  * Theme settings page (shown in the admin theme): color fields, preview.
  */
 
-.bs-native-color-fields {
+.bootstrap-native-color-fields {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
   gap: 0 1.5rem;
 }
 
-.bs-native-color-fields .form-item {
+.bootstrap-native-color-fields .form-item {
   margin: .5em 0 1em;
 }
 
-.bs-native-picker {
+.bootstrap-native-picker {
   width: 2.25rem;
   height: 2rem;
   padding: 0 2px;
@@ -25,16 +25,16 @@
 }
 
 /* No color chosen: the swatch shows the default, faded. */
-.bs-native-picker.is-default {
+.bootstrap-native-picker.is-default {
   opacity: .45;
 }
 
-.bs-native-color {
+.bootstrap-native-color {
   font-family: ui-monospace, Menlo, Consolas, monospace;
   vertical-align: middle;
 }
 
-.bs-native-clear {
+.bootstrap-native-clear {
   margin-left: .375rem;
   padding: 0;
   color: #0071b3;
@@ -44,7 +44,7 @@
   text-decoration: underline;
 }
 
-.bs-native-preview iframe {
+.bootstrap-native-preview iframe {
   display: block;
   width: 100%;
   max-width: 44rem;
@@ -53,7 +53,7 @@
   border-radius: 6px;
 }
 
-.bs-native-notes {
+.bootstrap-native-notes {
   max-width: 44rem;
   padding: .5em 1em;
   margin-top: .75em;
@@ -62,11 +62,11 @@
   border-radius: 6px;
 }
 
-.bs-native-notes p {
+.bootstrap-native-notes p {
   margin: .25em 0;
 }
 
-.bs-native-swatch {
+.bootstrap-native-swatch {
   display: inline-block;
   width: 1em;
   height: 1em;

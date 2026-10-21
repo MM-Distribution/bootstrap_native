@@ -44,7 +44,7 @@
   }
 
   // Local tasks (tabs): Bootstrap's nav classes come from
-  // bs_native_menu_local_tasks(); this only spaces them.
+  // bootstrap_native_menu_local_tasks(); this only spaces them.
   .tabs-wrapper {
     margin-block-end: 1.25rem;
   }
@@ -53,7 +53,7 @@
     margin-top: .75rem;
   }
 
-  // Navbar menus from theme_links() (bs_native_preprocess_page() adds
+  // Navbar menus from theme_links() (bootstrap_native_preprocess_page() adds
   // .nav-link to the links; the items keep core's classes).
   .navbar-nav > li {
     @extend .nav-item;
@@ -174,7 +174,7 @@
     }
   }
 
-  // Tables: Bootstrap's .table and the wrapper come from bs_native_table().
+  // Tables: Bootstrap's .table and the wrapper come from bootstrap_native_table().
   .table-responsive {
     margin-block-end: 1rem;
   }

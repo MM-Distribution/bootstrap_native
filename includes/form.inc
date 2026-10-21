@@ -19,11 +19,11 @@
  * - anything else (preview, cancel, add another, upload): outlined.
  * A button that already has a Bootstrap class (btn-*) keeps it.
  */
-function bs_native_button($variables) {
+function bootstrap_native_button($variables) {
   $element = &$variables['element'];
   $classes = isset($element['#attributes']['class']) ? (array) $element['#attributes']['class'] : array();
   if (!preg_grep('/^btn-/', $classes)) {
-    $element['#attributes']['class'] = array_merge($classes, bs_native_button_classes($element));
+    $element['#attributes']['class'] = array_merge($classes, bootstrap_native_button_classes($element));
   }
   return theme_button($variables);
 }
@@ -31,7 +31,7 @@ function bs_native_button($variables) {
 /**
  * The Bootstrap classes for a form button.
  */
-function bs_native_button_classes(array $element) {
+function bootstrap_native_button_classes(array $element) {
   $key = '';
   if (!empty($element['#array_parents'])) {
     $key = end($element['#array_parents']);
@@ -56,7 +56,7 @@ function bs_native_button_classes(array $element) {
  * Errors are announced at once (role="alert"), others politely
  * (role="status").
  */
-function bs_native_status_messages($variables) {
+function bootstrap_native_status_messages($variables) {
   $display = $variables['display'];
   $output = '';
 

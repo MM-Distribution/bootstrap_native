@@ -1,5 +1,5 @@
 #!/bin/bash
-# Builds css/bs_native.css (from scss/) and js/bootstrap.bundle.min.js (from
+# Builds css/bootstrap_native.css (from scss/) and js/bootstrap.bundle.min.js (from
 # vendor/bootstrap), then checks the CSS custom properties against
 # Bootstrap's own list.
 #
@@ -17,8 +17,8 @@ TMP="$(mktemp -d)"
 trap '/bin/rm -rf "${TMP:?}"' EXIT
 
 "$SASS" --no-source-map --style="$STYLE" --quiet-deps \
-  --silence-deprecation=import "$DIR/scss/bs_native.scss" "$TMP/bs_native.css"
-python3 "$DIR/build/postprocess.py" css "$TMP/bs_native.css" "$DIR/css/bs_native.css"
+  --silence-deprecation=import "$DIR/scss/bootstrap_native.scss" "$TMP/bootstrap_native.css"
+python3 "$DIR/build/postprocess.py" css "$TMP/bootstrap_native.css" "$DIR/css/bootstrap_native.css"
 python3 "$DIR/build/postprocess.py" js "$DIR/vendor/bootstrap/dist/js/bootstrap.bundle.min.js" "$DIR/js/bootstrap.bundle.min.js"
 
 # Every --bs- property used must be one Bootstrap defines somewhere (a typo
@@ -26,7 +26,7 @@ python3 "$DIR/build/postprocess.py" js "$DIR/vendor/bootstrap/dist/js/bootstrap.
 python3 - "$DIR" <<'EOF'
 import re, sys, pathlib
 d = pathlib.Path(sys.argv[1])
-css = (d / 'css/bs_native.css').read_text()
+css = (d / 'css/bootstrap_native.css').read_text()
 defined = set(re.findall(r'(--bs-[\w-]+)\s*:', css))
 used = set(re.findall(r'var\((--bs-[\w-]+)', css))
 # Set at runtime: by Bootstrap's JavaScript or the theme's color settings.

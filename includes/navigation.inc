@@ -11,7 +11,7 @@
  * Core's ul.tabs.primary / ul.tabs.secondary stay; primary tabs are
  * nav-tabs, secondary ones nav-pills.
  */
-function bs_native_menu_local_tasks(&$variables) {
+function bootstrap_native_menu_local_tasks(&$variables) {
   $output = '';
   if (!empty($variables['primary'])) {
     $variables['primary']['#prefix'] = '<h2 class="element-invisible">' . t('Primary tabs') . '</h2>';
@@ -31,7 +31,7 @@ function bs_native_menu_local_tasks(&$variables) {
 /**
  * Overrides theme_menu_local_task(): li.nav-item, a.nav-link.
  */
-function bs_native_menu_local_task($variables) {
+function bootstrap_native_menu_local_task($variables) {
   $link = $variables['element']['#link'];
   $link_text = $link['title'];
   $link['localized_options']['attributes']['class'][] = 'nav-link';
@@ -57,7 +57,7 @@ function bs_native_menu_local_task($variables) {
 /**
  * Overrides theme_breadcrumb(): Bootstrap 6's breadcrumb markup.
  */
-function bs_native_breadcrumb($variables) {
+function bootstrap_native_breadcrumb($variables) {
   $breadcrumb = $variables['breadcrumb'];
   if (empty($breadcrumb)) {
     return '';
@@ -86,7 +86,7 @@ function bs_native_breadcrumb($variables) {
  * The table itself is core's (theme_table()), so tabledrag, sticky headers
  * and table sorting work as usual.
  */
-function bs_native_table($variables) {
+function bootstrap_native_table($variables) {
   $variables['attributes']['class'][] = 'table';
   return '<div class="table-responsive">' . theme_table($variables) . '</div>';
 }

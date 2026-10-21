@@ -11,12 +11,12 @@
 (function ($) {
   'use strict';
 
-  Drupal.behaviors.bsNativeColors = {
+  Drupal.behaviors.bootstrapNativeColors = {
     attach: function (context) {
-      $('input.bs-native-color', context).once('bs-native-color', function () {
+      $('input.bootstrap-native-color', context).once('bootstrap-native-color', function () {
         var $text = $(this);
-        var $picker = $('<input type="color" class="bs-native-picker" />');
-        var $clear = $('<button type="button" class="bs-native-clear"></button>').text(Drupal.t('Clear'));
+        var $picker = $('<input type="color" class="bootstrap-native-picker" />');
+        var $clear = $('<button type="button" class="bootstrap-native-clear"></button>').text(Drupal.t('Clear'));
         $picker.attr('aria-label', Drupal.t('Pick @name', { '@name': $.trim($('label[for="' + this.id + '"]').text()) }));
 
         function sync() {

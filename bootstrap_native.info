@@ -5,7 +5,7 @@ version = 7.x-1.0-dev
 screenshot = screenshot.png
 
 ; Compiled from scss/ by build/build.sh (Bootstrap 6.0.0-alpha.1 in vendor/bootstrap).
-stylesheets[all][] = css/bs_native.css
+stylesheets[all][] = css/bootstrap_native.css
 
 regions[header]         = Header
 regions[navigation]     = Navigation
@@ -29,9 +29,9 @@ features[] = secondary_menu
 settings[default_logo] = 0
 
 ; Colors: empty means Bootstrap's own (see theme-settings.php).
-settings[bs_native_color_primary] = ''
-settings[bs_native_color_secondary] = ''
-settings[bs_native_color_base] = ''
-settings[bs_native_color_text] = ''
-settings[bs_native_color_link] = ''
-settings[bs_native_color_link_hover] = ''
+settings[bootstrap_native_color_primary] = ''
+settings[bootstrap_native_color_secondary] = ''
+settings[bootstrap_native_color_base] = ''
+settings[bootstrap_native_color_text] = ''
+settings[bootstrap_native_color_link] = ''
+settings[bootstrap_native_color_link_hover] = ''

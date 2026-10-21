@@ -21,8 +21,8 @@ MENU = re.compile(r'(?<![\w.-])\.menu(?![\w-])')
 
 
 def css(text):
-    # Custom properties: --name -> --bs-name (the theme's own use --bsn-).
-    text, props = re.subn(r'(?<![\w-])--(?!bs-|bsn-)([a-zA-Z_][\w-]*)', r'--bs-\1', text)
+    # Custom properties: --name -> --bs-name (the theme's own use --bn-).
+    text, props = re.subn(r'(?<![\w-])--(?!bs-|bn-)([a-zA-Z_][\w-]*)', r'--bs-\1', text)
     text, menus = MENU.subn('.bs-menu', text)
     if props < 1000 or menus < 10:
         sys.exit('css: only %d custom properties and %d .menu selectors changed' % (props, menus))

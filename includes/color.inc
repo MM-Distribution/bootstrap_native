@@ -25,7 +25,7 @@
  * @return array|null
  *   array(r, g, b), each 0..1, or NULL when $value isn't a hex color.
  */
-function bs_native_color_parse($value) {
+function bootstrap_native_color_parse($value) {
   $value = ltrim(trim((string) $value), '#');
   if (preg_match('/^[0-9a-f]{3}$/i', $value)) {
     $value = $value[0] . $value[0] . $value[1] . $value[1] . $value[2] . $value[2];
@@ -43,7 +43,7 @@ function bs_native_color_parse($value) {
 /**
  * Formats array(r, g, b) (0..1) as '#rrggbb'.
  */
-function bs_native_color_hex(array $rgb) {
+function bootstrap_native_color_hex(array $rgb) {
   $hex = '#';
   foreach ($rgb as $channel) {
     $hex .= sprintf('%02x', (int) round(max(0, min(1, $channel)) * 255));
@@ -54,39 +54,39 @@ function bs_native_color_hex(array $rgb) {
 /**
  * sRGB channel (0..1) to linear light.
  */
-function _bs_native_color_linear($c) {
+function _bootstrap_native_color_linear($c) {
   return $c <= 0.04045 ? $c / 12.92 : pow(($c + 0.055) / 1.055, 2.4);
 }
 
 /**
  * Linear light to sRGB channel (0..1).
  */
-function _bs_native_color_gamma($c) {
+function _bootstrap_native_color_gamma($c) {
   return $c <= 0.0031308 ? 12.92 * $c : 1.055 * pow(max(0, $c), 1 / 2.4) - 0.055;
 }
 
 /**
  * WCAG relative luminance of array(r, g, b).
  */
-function bs_native_color_luminance(array $rgb) {
-  list($r, $g, $b) = array_map('_bs_native_color_linear', $rgb);
+function bootstrap_native_color_luminance(array $rgb) {
+  list($r, $g, $b) = array_map('_bootstrap_native_color_linear', $rgb);
   return 0.2126 * $r + 0.7152 * $g + 0.0722 * $b;
 }
 
 /**
  * WCAG contrast ratio of two colors (1..21).
  */
-function bs_native_color_contrast(array $a, array $b) {
-  $la = bs_native_color_luminance($a);
-  $lb = bs_native_color_luminance($b);
+function bootstrap_native_color_contrast(array $a, array $b) {
+  $la = bootstrap_native_color_luminance($a);
+  $lb = bootstrap_native_color_luminance($b);
   return (max($la, $lb) + 0.05) / (min($la, $lb) + 0.05);
 }
 
 /**
  * array(r, g, b) to OKLab array(L, a, b).
  */
-function bs_native_color_oklab(array $rgb) {
-  list($r, $g, $b) = array_map('_bs_native_color_linear', $rgb);
+function bootstrap_native_color_oklab(array $rgb) {
+  list($r, $g, $b) = array_map('_bootstrap_native_color_linear', $rgb);
   $l = pow(0.4122214708 * $r + 0.5363325363 * $g + 0.0514459929 * $b, 1 / 3);
   $m = pow(0.2119034982 * $r + 0.6806995451 * $g + 0.1073969566 * $b, 1 / 3);
   $s = pow(0.0883024619 * $r + 0.2817188376 * $g + 0.6299787005 * $b, 1 / 3);
@@ -100,12 +100,12 @@ function bs_native_color_oklab(array $rgb) {
 /**
  * OKLab array(L, a, b) to array(r, g, b), unclamped (may be out of gamut).
  */
-function _bs_native_color_from_oklab(array $lab) {
+function _bootstrap_native_color_from_oklab(array $lab) {
   list($L, $a, $b) = $lab;
   $l = pow($L + 0.3963377774 * $a + 0.2158037573 * $b, 3);
   $m = pow($L - 0.1055613458 * $a - 0.0638541728 * $b, 3);
   $s = pow($L - 0.0894841775 * $a - 1.2914855480 * $b, 3);
-  return array_map('_bs_native_color_gamma', array(
+  return array_map('_bootstrap_native_color_gamma', array(
     4.0767416621 * $l - 3.3077115913 * $m + 0.2309699292 * $s,
     -1.2684380046 * $l + 2.6097574011 * $m - 0.3413193965 * $s,
     -0.0041960863 * $l - 0.7034186147 * $m + 1.7076147010 * $s,
@@ -115,8 +115,8 @@ function _bs_native_color_from_oklab(array $lab) {
 /**
  * array(r, g, b) to OKLCH array(L, C, h) (h in degrees).
  */
-function bs_native_color_oklch(array $rgb) {
-  list($L, $a, $b) = bs_native_color_oklab($rgb);
+function bootstrap_native_color_oklch(array $rgb) {
+  list($L, $a, $b) = bootstrap_native_color_oklab($rgb);
   $h = rad2deg(atan2($b, $a));
   return array($L, sqrt($a * $a + $b * $b), $h < 0 ? $h + 360 : $h);
 }
@@ -124,12 +124,12 @@ function bs_native_color_oklch(array $rgb) {
 /**
  * OKLCH array(L, C, h) to array(r, g, b), lowering chroma to fit sRGB.
  */
-function bs_native_color_from_oklch(array $lch) {
+function bootstrap_native_color_from_oklch(array $lch) {
   list($L, $C, $h) = $lch;
   $L = max(0, min(1, $L));
   $rad = deg2rad($h);
   $in = function ($c) use ($L, $rad) {
-    $rgb = _bs_native_color_from_oklab(array($L, $c * cos($rad), $c * sin($rad)));
+    $rgb = _bootstrap_native_color_from_oklab(array($L, $c * cos($rad), $c * sin($rad)));
     foreach ($rgb as $channel) {
       if ($channel < -0.0005 || $channel > 1.0005) {
         return FALSE;
@@ -160,16 +160,16 @@ function bs_native_color_from_oklch(array $lch) {
 /**
  * Mixes two colors in OKLab; $amount is how much of $b (0..1).
  */
-function bs_native_color_mix(array $a, array $b, $amount) {
-  $la = bs_native_color_oklab($a);
-  $lb = bs_native_color_oklab($b);
+function bootstrap_native_color_mix(array $a, array $b, $amount) {
+  $la = bootstrap_native_color_oklab($a);
+  $lb = bootstrap_native_color_oklab($b);
   $mix = array();
   foreach ($la as $i => $value) {
     $mix[$i] = $value + ($lb[$i] - $value) * $amount;
   }
   return array_map(function ($c) {
     return max(0, min(1, $c));
-  }, _bs_native_color_from_oklab($mix));
+  }, _bootstrap_native_color_from_oklab($mix));
 }
 
 /**
@@ -178,11 +178,11 @@ function bs_native_color_mix(array $a, array $b, $amount) {
  * White wins near the line (Bootstrap's own blue, #0d6efd, is 4.5:1 with
  * white and slightly more with black; brand buttons usually carry white).
  */
-function bs_native_color_on(array $bg) {
+function bootstrap_native_color_on(array $bg) {
   $white = array(1, 1, 1);
   $black = array(0, 0, 0);
-  $on_white = bs_native_color_contrast($white, $bg);
-  return $on_white >= 4.4 || $on_white >= bs_native_color_contrast($black, $bg) ? $white : $black;
+  $on_white = bootstrap_native_color_contrast($white, $bg);
+  return $on_white >= 4.4 || $on_white >= bootstrap_native_color_contrast($black, $bg) ? $white : $black;
 }
 
 /**
@@ -191,47 +191,47 @@ function bs_native_color_on(array $bg) {
  * Only the lightness changes (hue kept). When even black or white can't
  * reach $ratio, the best of the two is returned.
  */
-function bs_native_color_readable(array $fg, array $bg, $ratio = 4.5) {
-  if (bs_native_color_contrast($fg, $bg) >= $ratio) {
+function bootstrap_native_color_readable(array $fg, array $bg, $ratio = 4.5) {
+  if (bootstrap_native_color_contrast($fg, $bg) >= $ratio) {
     return $fg;
   }
   // A little margin: the result is rounded to a hex color afterwards.
   $ratio += 0.03;
-  list($L, $C, $h) = bs_native_color_oklch($fg);
+  list($L, $C, $h) = bootstrap_native_color_oklch($fg);
   // Away from the background: darker on light backgrounds, lighter on dark.
-  $target = bs_native_color_luminance($bg) > 0.18 ? 0 : 1;
-  if (bs_native_color_contrast(bs_native_color_from_oklch(array($target, $C, $h)), $bg) < $ratio) {
-    return bs_native_color_on($bg);
+  $target = bootstrap_native_color_luminance($bg) > 0.18 ? 0 : 1;
+  if (bootstrap_native_color_contrast(bootstrap_native_color_from_oklch(array($target, $C, $h)), $bg) < $ratio) {
+    return bootstrap_native_color_on($bg);
   }
   // The closest lightness to the original that passes.
   $near = $L;
   $far = $target;
   for ($i = 0; $i < 24; $i++) {
     $mid = ($near + $far) / 2;
-    if (bs_native_color_contrast(bs_native_color_from_oklch(array($mid, $C, $h)), $bg) >= $ratio) {
+    if (bootstrap_native_color_contrast(bootstrap_native_color_from_oklch(array($mid, $C, $h)), $bg) >= $ratio) {
       $far = $mid;
     }
     else {
       $near = $mid;
     }
   }
-  return bs_native_color_from_oklch(array($far, $C, $h));
+  return bootstrap_native_color_from_oklch(array($far, $C, $h));
 }
 
 /**
  * $color with its OKLCH lightness moved by $amount (negative = darker).
  */
-function bs_native_color_shift(array $color, $amount) {
-  list($L, $C, $h) = bs_native_color_oklch($color);
-  return bs_native_color_from_oklch(array($L + $amount, $C, $h));
+function bootstrap_native_color_shift(array $color, $amount) {
+  list($L, $C, $h) = bootstrap_native_color_oklch($color);
+  return bootstrap_native_color_from_oklch(array($L + $amount, $C, $h));
 }
 
 /**
  * Whether a background color calls for the dark color scheme.
  */
-function bs_native_color_is_dark(array $bg) {
+function bootstrap_native_color_is_dark(array $bg) {
   // Where black and white text read equally well (about mid gray).
-  return bs_native_color_luminance($bg) < 0.18;
+  return bootstrap_native_color_luminance($bg) < 0.18;
 }
 
 /**
@@ -247,17 +247,17 @@ function bs_native_color_is_dark(array $bg) {
  *   - notes: array of setting => array('from' => hex, 'to' => hex,
  *     'reason' => text) for colors changed to stay readable.
  */
-function bs_native_color_tokens(array $settings) {
+function bootstrap_native_color_tokens(array $settings) {
   $color = array();
   foreach (array('primary', 'secondary', 'base', 'text', 'link', 'link_hover') as $key) {
-    $color[$key] = isset($settings[$key]) ? bs_native_color_parse($settings[$key]) : NULL;
+    $color[$key] = isset($settings[$key]) ? bootstrap_native_color_parse($settings[$key]) : NULL;
   }
   $vars = array();
   $notes = array();
-  $hex = 'bs_native_color_hex';
+  $hex = 'bootstrap_native_color_hex';
   // Records a color changed for readability.
   $readable = function ($key, array $fg, array $bg, $ratio) use (&$notes, $hex) {
-    $out = bs_native_color_readable($fg, $bg, $ratio);
+    $out = bootstrap_native_color_readable($fg, $bg, $ratio);
     if ($key && $hex($out) != $hex($fg)) {
       $notes[$key] = array(
         'from' => $hex($fg),
@@ -270,26 +270,26 @@ function bs_native_color_tokens(array $settings) {
 
   // Base and text. Without a base color, white (Bootstrap's light body).
   $base = $color['base'] ? $color['base'] : array(1, 1, 1);
-  $dark = bs_native_color_is_dark($base);
+  $dark = bootstrap_native_color_is_dark($base);
   if ($color['text']) {
     $text = $readable('text', $color['text'], $base, 4.5);
   }
   else {
     // Near black or near white with a hint of the base color's hue.
-    list(, $c, $h) = bs_native_color_oklch($base);
-    $text = bs_native_color_readable(bs_native_color_from_oklch(array($dark ? 0.96 : 0.22, min($c, 0.02), $h)), $base, 7);
+    list(, $c, $h) = bootstrap_native_color_oklch($base);
+    $text = bootstrap_native_color_readable(bootstrap_native_color_from_oklch(array($dark ? 0.96 : 0.22, min($c, 0.02), $h)), $base, 7);
   }
   if ($color['base'] || $color['text']) {
     $vars['--bs-bg-body'] = $hex($base);
     $vars['--bs-fg-body'] = $hex($text);
     // Steps between the base and the text color: panels, wells, borders.
     foreach (array(1 => 0.025, 2 => 0.05, 3 => 0.085, 4 => 0.13) as $step => $amount) {
-      $vars['--bs-bg-' . $step] = $hex(bs_native_color_mix($base, $text, $amount));
+      $vars['--bs-bg-' . $step] = $hex(bootstrap_native_color_mix($base, $text, $amount));
     }
     foreach (array(1 => array(0.12, 7), 2 => array(0.24, 4.5), 3 => array(0.36, 4.5), 4 => array(0.5, 3)) as $step => $info) {
-      $vars['--bs-fg-' . $step] = $hex(bs_native_color_readable(bs_native_color_mix($text, $base, $info[0]), $base, $info[1]));
+      $vars['--bs-fg-' . $step] = $hex(bootstrap_native_color_readable(bootstrap_native_color_mix($text, $base, $info[0]), $base, $info[1]));
     }
-    $vars['--bs-border-color'] = $hex(bs_native_color_mix($base, $text, 0.16));
+    $vars['--bs-border-color'] = $hex(bootstrap_native_color_mix($base, $text, 0.16));
   }
 
   // Brand colors: Bootstrap's "primary" and "accent" token families.
@@ -301,13 +301,13 @@ function bs_native_color_tokens(array $settings) {
     $p = '--bs-' . $family . '-';
     $vars[$p . 'base'] = $hex($brand);
     $vars[$p . 'bg'] = $hex($brand);
-    $vars[$p . 'contrast'] = $hex(bs_native_color_on($brand));
+    $vars[$p . 'contrast'] = $hex(bootstrap_native_color_on($brand));
     $vars[$p . 'fg'] = $hex($readable($key, $brand, $base, 4.5));
-    $vars[$p . 'fg-emphasis'] = $hex(bs_native_color_readable(bs_native_color_mix($brand, $text, 0.35), $base, 7));
-    $vars[$p . 'bg-subtle'] = $hex(bs_native_color_mix($base, $brand, 0.12));
-    $vars[$p . 'bg-muted'] = $hex(bs_native_color_mix($base, $brand, 0.22));
-    $vars[$p . 'border'] = $hex(bs_native_color_mix($base, $brand, 0.45));
-    $vars[$p . 'focus-ring'] = $hex(bs_native_color_mix($base, $brand, 0.5));
+    $vars[$p . 'fg-emphasis'] = $hex(bootstrap_native_color_readable(bootstrap_native_color_mix($brand, $text, 0.35), $base, 7));
+    $vars[$p . 'bg-subtle'] = $hex(bootstrap_native_color_mix($base, $brand, 0.12));
+    $vars[$p . 'bg-muted'] = $hex(bootstrap_native_color_mix($base, $brand, 0.22));
+    $vars[$p . 'border'] = $hex(bootstrap_native_color_mix($base, $brand, 0.45));
+    $vars[$p . 'focus-ring'] = $hex(bootstrap_native_color_mix($base, $brand, 0.5));
   }
 
   // Links: their own color, else the primary text color, else Bootstrap's.
@@ -316,7 +316,7 @@ function bs_native_color_tokens(array $settings) {
     $link = $readable('link', $color['link'], $base, 4.5);
   }
   elseif ($color['primary']) {
-    $link = bs_native_color_readable($color['primary'], $base, 4.5);
+    $link = bootstrap_native_color_readable($color['primary'], $base, 4.5);
   }
   if ($link) {
     $vars['--bs-link-color'] = $hex($link);
@@ -326,7 +326,7 @@ function bs_native_color_tokens(array $settings) {
   }
   elseif ($link) {
     // A step further from the background than the link itself.
-    $vars['--bs-link-hover-color'] = $hex(bs_native_color_readable(bs_native_color_shift($link, $dark ? 0.1 : -0.1), $base, 4.5));
+    $vars['--bs-link-hover-color'] = $hex(bootstrap_native_color_readable(bootstrap_native_color_shift($link, $dark ? 0.1 : -0.1), $base, 4.5));
   }
 
   return array(
@@ -337,9 +337,9 @@ function bs_native_color_tokens(array $settings) {
 }
 
 /**
- * The CSS for bs_native_color_tokens() output: one :root rule.
+ * The CSS for bootstrap_native_color_tokens() output: one :root rule.
  */
-function bs_native_color_css(array $tokens) {
+function bootstrap_native_color_css(array $tokens) {
   $css = 'color-scheme:' . $tokens['scheme'] . ';';
   foreach ($tokens['vars'] as $name => $value) {
     $css .= $name . ':' . $value . ';';
